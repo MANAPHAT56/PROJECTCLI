@@ -1,0 +1,23 @@
+CREATE TABLE promotions (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  image_path VARCHAR(500),
+  name VARCHAR(255) NOT NULL,
+  link VARCHAR(255),
+  detail_1 TEXT,
+  detail_2 TEXT,
+  
+);
+CREATE TABLE promotion_categories (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  promotion_id INT NOT NULL,
+  category_id INT NOT NULL,
+  FOREIGN KEY (promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+);
+CREATE TABLE promotion_products (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  promotion_id INT NOT NULL,
+  product_id INT NOT NULL,
+  FOREIGN KEY (promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);

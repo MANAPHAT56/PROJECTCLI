@@ -1,0 +1,24 @@
+CREATE TABLE Products (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(255) NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  image_Descrtiption_path VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
+  image_Main_path VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
+  image_Sub_path VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  category_id INT NOT NULL,
+  subcategory_id INT NOT NULL,
+  total_purchases INT DEFAULT 0,
+  monthly_purchases INT DEFAULT 0,
+  stock INT DEFAULT 0,
+  FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE TABLE product_images (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  product_id INT NOT NULL,
+  image_path VARCHAR(500) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
