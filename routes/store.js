@@ -3,7 +3,8 @@ const router = express.Router();
 const storeController = require('../controllers/storeController');
 
 // GET /store/categories => รายการหมวดหมู่สินค้าเเละสินค้าบางส่วน
-router.get('/categories', storeController.getCategoriesWithProducts)
+router.get('/categories', storeController.getCategoriesWithProducts);
+router.get('/subcategories/:categoryId', storeController.getSubCategorieswithProducts);
 
 // GET /store/preview/:categoryId => สินค้าจำนวนจำกัดจากหมวดหมู่ (เช่น 4 ชิ้นแรก)
 router.get('/preview/:categoryId', storeController.getCategoryPreview);

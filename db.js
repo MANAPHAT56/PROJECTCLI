@@ -1,5 +1,5 @@
   const path = require('path');
-  const mysql = require('mysql2');
+  const mysql = require('mysql2/promise');
   const fs = require('fs');
   require('dotenv').config({ path: path.resolve(__dirname, './secrets/mysql.env') });
 
@@ -27,23 +27,22 @@
     port: process.env.MYSQL_PORT || 3306,
     waitForConnections: true,
     connectionLimit: process.env.MYSQL_CONNECTION_LIMIT || 50,
-    queueLimit: process.env.MYSQL_QUEUE_LIMIT || 100,
-    connectTimeout: 10000,
-    acquireTimeout: 10000,
-    timeout: 60000
+    queueLimit: process.env.MYSQL_QUEUE_LIMIT || 100
     // ...sslOptions
   });
 
   // Optional: Ping database to check connection (remove in production if not needed)
-  pool.getConnection((err, connection) => {
-    if (err) {
-      console.error('❌ Database connection failed:', err.message);
-      process.exit(1);
-    }
-    
+  (async () => {
+  try {
+    const connection = await pool.getConnection();
     console.log('✅ Database connection established');
     connection.release();
-  });
+  } catch (err) {
+    console.error('❌ Database connection failed:', err.message);
+    process.exit(1);
+  }
+})();
+
 
   // Handle pool errors
   pool.on('error', (err) => {
@@ -52,21 +51,7 @@
   });
 
   module.exports = {
-    pool,
-    getConnection: () => {
-      return new Promise((resolve, reject) => {
-        pool.getConnection((err, connection) => {
-          if (err) return reject(err);
-          resolve(connection);
-        });
-      });
-    },
-    query: (sql, values) => {
-      return new Promise((resolve, reject) => {
-        pool.query(sql, values, (err, results) => {
-          if (err) return reject(err);
-          resolve(results);
-        });
-      });
-    }
+     pool,
+  getConnection: () => pool.getConnection(),
+  query: (sql, values) => pool.query(sql, values)  // ✅ เปลี่ยนตรงนี้
   };

@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/navbar';
 import ProductCategoriesSection from './components/ProductCategoriesSection';
 const ProductsEachCategories = React.lazy(() => import('./components/ProductsEachCategories'));
+import ProductEachSubCategories from './components/ProductEachSubCategories';
+import ProductsDetail from './components/ProductsDetail';
+import Productinsubcategory from './components/Productinsubcategory';
 // import Home from './pages/Home';
 // import ProductsAll from './pages/ProductsAll';
 // import ProductsRecommended from './pages/ProductsRecommended';
@@ -24,12 +27,39 @@ const App = () => {
             </>
           }
         />
+        <Route
+          path="/category/:categoryId"
+          element={
+            <>
+              <ProductEachSubCategories />
+            </>
+          }
+        />
          <Route
           path="/"
           element={
             <>
               <ProductCategoriesSection />
             </>
+            
+          }
+        />
+          <Route
+          path="/detailProducts"
+          element={
+            <>
+              <ProductsDetail />
+            </>
+            
+          }
+        />
+        <Route
+          path="/ProductinCategory"
+          element={
+            <>
+              <Productinsubcategory />
+            </>
+            
           }
         />
         {/* Route อื่นๆ */}

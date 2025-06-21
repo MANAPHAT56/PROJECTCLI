@@ -1,94 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ShoppingCart, Heart, Star, Eye, Plus } from 'lucide-react';
-
+import { useNavigate } from 'react-router-dom';
 const ProductShowcase = () => {
+  const navigate = useNavigate();
   const [visibleProducts, setVisibleProducts] = useState({});
   const [favorites, setFavorites] = useState(new Set());
   const [animatedCards, setAnimatedCards] = useState(new Set());
-//  const [categories, setCategories] = useState([]);
-//   const [loading, setLoading] = useState(true); // สำหรับสถานะโหลด
-//   const [error, setError] = useState(null);
-
-
-useEffect(() => {
-  fetch('/api/store/categories')
+   const [categories, setCategories] = useState([]);
+   useEffect(() => {
+  fetch('http://localhost:5000/api/store/categories/')
     .then(res => res.json())
     .then(data => setCategories(data))
     .catch(err => console.error('Error fetching categories:', err));
 }, []);
-
-  const categories = {
-    'เทคโนโลยี': {
-      icon: '💻',
-      gradient: 'from-purple-600 to-blue-600',
-      products: [
-        { id: 1, name: 'MacBook Pro M3', price: '฿65,000', image: '🖥️', rating: 4.8, reviews: 324 },
-        { id: 2, name: 'iPhone 15 Pro', price: '฿42,900', image: '📱', rating: 4.9, reviews: 567 },
-        { id: 3, name: 'AirPods Pro', price: '฿8,990', image: '🎧', rating: 4.7, reviews: 234 },
-        { id: 4, name: 'iPad Air', price: '฿24,900', image: '📟', rating: 4.6, reviews: 189 }
-      ]
-    },
-    'แฟชั่น': {
-      icon: '👕',
-      gradient: 'from-pink-600 to-rose-600', 
-      products: [
-        { id: 5, name: 'เสื้อโปโลผู้ชาย', price: '฿1,290', image: '👔', rating: 4.5, reviews: 156 },
-        { id: 6, name: 'กระเป๋าหนังแท้', price: '฿3,500', image: '👜', rating: 4.8, reviews: 89 },
-        { id: 7, name: 'รองเท้าผ้าใบ', price: '฿2,890', image: '👟', rating: 4.6, reviews: 267 },
-        { id: 8, name: 'นาฬิกาข้อมือ', price: '฿4,500', image: '⌚', rating: 4.7, reviews: 143 }
-      ]
-    },
-    'บ้านและสวน': {
-      icon: '🏠',
-      gradient: 'from-green-600 to-teal-600',
-      products: [
-        { id: 9, name: 'โซฟาผ้า 3 ที่นั่ง', price: '฿15,900', image: '🛋️', rating: 4.4, reviews: 78 },
-        { id: 10, name: 'โต๊ะทำงานไม้', price: '฿4,200', image: '🪑', rating: 4.6, reviews: 134 },
-        { id: 11, name: 'ต้นไผ่ในกระถาง', price: '฿890', image: '🌿', rating: 4.3, reviews: 56 },
-        { id: 12, name: 'โคมไฟตั้งโต๊ะ', price: '฿1,450', image: '💡', rating: 4.5, reviews: 98 }
-      ]
-    },
-    'อาหารและเครื่องดื่ม': {
-      icon: '🍽️',
-      gradient: 'from-orange-600 to-red-600',
-      products: [
-        { id: 13, name: 'กาแฟคั่วเข้ม', price: '฿450', image: '☕', rating: 4.7, reviews: 289 },
-        { id: 14, name: 'น้ำผึ้งแท้', price: '฿320', image: '🍯', rating: 4.8, reviews: 156 },
-        { id: 15, name: 'ชาเขียวออร์แกนิก', price: '฿280', image: '🍵', rating: 4.6, reviews: 178 },
-        { id: 16, name: 'ผลไม้อบแห้ง', price: '฿180', image: '🥜', rating: 4.4, reviews: 92 }
-      ]
-    },
-    'กีฬาและออกกำลังกาย': {
-      icon: '🏃‍♂️',
-      gradient: 'from-cyan-600 to-blue-600',
-      products: [
-        { id: 17, name: 'ดัมเบลปรับน้ำหนัก', price: '฿2,890', image: '🏋️', rating: 4.6, reviews: 234 },
-        { id: 18, name: 'เสื่อโยคะ', price: '฿590', image: '🧘', rating: 4.5, reviews: 167 },
-        { id: 19, name: 'รองเท้าวิ่ง', price: '฿3,200', image: '👟', rating: 4.8, reviews: 345 },
-        { id: 20, name: 'ขวดน้ำสเตนเลส', price: '฿790', image: '🍼', rating: 4.4, reviews: 123 }
-      ]
-    }
-  };
-
-  // Initialize visible products (show 2 products per category initially)
+  // Initialize visible products (show 4 products per category initially)
   useEffect(() => {
     const initial = {};
     Object.keys(categories).forEach(category => {
-      initial[category] = 2;
+      initial[category] = 4;
     });
     setVisibleProducts(initial);
-  }, []);
+  }, [ categories]);
 
   // Animate cards on load
   useEffect(() => {
+    console.log('📦 categories animation card:', categories); // เพิ่มตรงนี้
     const timer = setTimeout(() => {
       const allProductIds = Object.values(categories).flatMap(cat => 
-        cat.products.slice(0, 2).map(p => p.id)
+        cat.products.slice(0, 4).map(p => p.id)
       );
       setAnimatedCards(new Set(allProductIds));
     }, 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [categories]);
 
   const showMoreProducts = (category) => {
     setVisibleProducts(prev => ({
@@ -115,9 +59,18 @@ useEffect(() => {
     });
   };
 
+  const navigateToCategory = (categoryId) => {
+    // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
+    // ในระบบจริงจะเป็นแบบนี้:
+    console.log(categoryId);
+    navigate(`/category/${categoryId}`);
+    // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
+  };
+
   const ProductCard = ({ product, index }) => {
     const isAnimated = animatedCards.has(product.id);
     const isFavorite = favorites.has(product.id);
+    console.log('📦 product:', product); // เพิ่มตรงนี้
     
     return (
       <div 
@@ -128,16 +81,23 @@ useEffect(() => {
         style={{ animationDelay: `${index * 100}ms` }}
       >
         <div className="relative mb-3 sm:mb-4">
-          <div className="text-4xl sm:text-5xl lg:text-6xl mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 text-center">
-            {product.image}
+          <div className="mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 text-center">
+            <img
+              src={product.image || product.image_Main_path }
+              alt={product.name}
+              className="w-full h-32 sm:h-40 object-cover rounded-xl"
+              onError={(e) => {
+                e.target.src = `https://via.placeholder.com/400x300/3b82f6/ffffff?text=${encodeURIComponent(product.name)}`;
+              }}
+            />
           </div>
           <button 
             onClick={(e) => {
               e.stopPropagation();
               toggleFavorite(product.id);
             }}
-            className={`absolute top-0 right-0 p-1.5 sm:p-2 rounded-full transition-all duration-300
-              ${isFavorite ? 'text-red-500 bg-red-100' : 'text-gray-400 hover:text-red-500'}`}
+            className={`absolute top-2 right-2 p-1.5 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm
+              ${isFavorite ? 'text-red-500 bg-red-100/80' : 'text-gray-400 hover:text-red-500 bg-white/80'}`}
           >
             <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
           </button>
@@ -149,10 +109,10 @@ useEffect(() => {
         
         <div className="flex items-center mb-2 sm:mb-3">
           <div className="flex items-center text-yellow-500 mr-2">
-            {/* <Star size={12} fill="currentColor" />
-            <span className="ml-1 text-xs sm:text-sm font-medium">{product.rating}</span> */}
+            <Star size={12} fill="currentColor" />
+            <span className="ml-1 text-xs sm:text-sm font-medium">{product.rating}</span>
           </div>
-          {/* <span className="text-slate-500 text-xs sm:text-sm">({product.reviews})</span> */}
+          <span className="text-slate-500 text-xs sm:text-sm">({product.reviews})</span>
         </div>
         
         <div className="flex items-center justify-between">
@@ -201,7 +161,8 @@ useEffect(() => {
       {/* Products Section */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-16">
         {Object.entries(categories).map(([categoryName, categoryData], categoryIndex) => (
-          <div key={categoryName} className="mb-20">
+             console.log('📦 categorylalalala:', categoryData), // เพิ่มตรงนี้
+          <div key={categoryData.name} className="mb-20">
             {/* Category Header */}
             <div className="flex items-center mb-12 animate-slide-in-left" 
                  style={{ animationDelay: `${categoryIndex * 200}ms` }}>
@@ -209,31 +170,44 @@ useEffect(() => {
                 {categoryData.icon}
               </div>
               <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">{categoryName}</h2>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">{categoryData.name}</h2>
                 <p className="text-slate-600">สินค้าคุณภาพดีที่คัดสรรมาแล้ว</p>
               </div>
             </div>
 
             {/* Products Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-8">
-              {categoryData.products.slice(0, 4).map((product, index) => (
-                  <ProductCard key={product.id} product={product} index={index} />
-                ))}
+              {categoryData.products.slice(0, visibleProducts[categoryName] || 4).map((product, index) => (
+                <ProductCard key={product.id} product={product} index={index} />
+              ))}
             </div>
 
             {/* Show More Button */}
+            {visibleProducts[categoryName] < categoryData.products.length && (
+              <div className="text-center mb-6">
+                <button
+                  onClick={() => showMoreProducts(categoryName)}
+                  className="group inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-green-500 to-emerald-600 
+                    text-white font-semibold rounded-full hover:from-green-400 hover:to-emerald-500 
+                    transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-sm sm:text-base"
+                >
+                  <Plus size={20} className="mr-2 group-hover:rotate-180 transition-transform duration-300" />
+                  ดูเพิ่มเติม
+                  <ChevronRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+                </button>
+              </div>
+            )}
+
+            {/* View All Category Button */}
             <div className="text-center">
               <button
-                onClick={() => {
-                  // Navigate to category page - you can replace this with actual routing
-                  alert(`ไปยังหน้าหมวดหมู่: ${categoryName}`);
-                }}
+                onClick={() => navigateToCategory(categoryData.id)}
                 className="group inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-sky-500 to-blue-600 
                   text-white font-semibold rounded-full hover:from-sky-400 hover:to-blue-500 
                   transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-sm sm:text-base"
               >
-                <Plus size={20} className="mr-2 group-hover:rotate-180 transition-transform duration-300" />
-                ดูสินค้าทั้งหมดใน{categoryName}
+                <Eye size={20} className="mr-2 group-hover:scale-110 transition-transform duration-300" />
+                ดูสินค้าทั้งหมดใน {categoryData.name}
                 <ChevronRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform duration-300" />
               </button>
             </div>

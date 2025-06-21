@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Menu, X, Home, Package, ShoppingCart, Building, Award, Users, Phone, FileText, Calendar } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // ใช้สำหรับการนำทาง
+import { ChevronDown, ChevronRight, Menu, X, Home, Package, ShoppingCart, Building, Award, Users, Phone, FileText, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+  // ใช้สำหรับการนำทาง
 const ModernNavbar = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [activeNestedDropdown, setActiveNestedDropdown] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,9 +25,22 @@ const ModernNavbar = () => {
       icon: Package,
       dropdown: [
         { name: 'สินค้าทั้งหมด', to: '/categories-with-products' },
-        { name: 'สินค้าแนะนำ', to: '#' },
         { name: 'สินค้าใหม่', to: '#' },
-        { name: 'สินค้าลดราคา', to: '#' }
+        { name: 'สินค้าลดราคา', to: '#' },
+        { name: 'สินค้าขายดี', to: '#' },
+        {
+          name: 'หมวดหมู่สินค้า',
+          to: '#',
+          hasNested: true,
+          nested: [
+            { name: 'เฟอร์นิเจอร์ห้องนั่งเล่น', to: '/category/living-room' },
+            { name: 'เฟอร์นิเจอร์ห้องนอน', to: '/category/bedroom' },
+            { name: 'เฟอร์นิเจอร์ห้องครัว', to: '/category/kitchen' },
+            { name: 'เฟอร์นิเจอร์ห้องทำงาน', to: '/category/office' },
+            { name: 'เฟอร์นิเจอร์สวน', to: '/category/garden' },
+            { name: 'ของตกแต่งบ้าน', to: '/category/decoration' }
+          ]
+        }
       ]
     },
     { name: 'ขั้นตอนการสั่งซื้อ', to: '#', icon: ShoppingCart },
@@ -39,20 +54,28 @@ const ModernNavbar = () => {
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
-    setActiveDropdown(null); // ปิด dropdown เมื่อเปิด/ปิดเมนู
+    setActiveDropdown(null);
+    setActiveNestedDropdown(null);
   };
 
   const handleDropdownToggle = (index) => {
     setActiveDropdown(activeDropdown === index ? null : index);
+    setActiveNestedDropdown(null);
+  };
+
+  const handleNestedDropdownToggle = (index) => {
+    setActiveNestedDropdown(activeNestedDropdown === index ? null : index);
   };
 
   const handleNavClick = (to) => {
     if (to !== '#') {
+      // console.log('Navigate to:', to);
       // Navigate to page - replace with your routing logic
-     navigate(to);
+      navigate(to);
     }
     setIsMenuOpen(false);
     setActiveDropdown(null);
+    setActiveNestedDropdown(null);
   };
 
   return (
@@ -105,7 +128,7 @@ const ModernNavbar = () => {
                 {/* Desktop Dropdown Menu */}
                 {item.dropdown && (
                   <div
-                    className={`absolute top-full left-0 mt-2 w-56 bg-slate-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-blue-500/20 transform transition-all duration-300 ${
+                    className={`absolute top-full left-0 mt-2 w-64 bg-slate-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-blue-500/20 transform transition-all duration-300 ${
                       activeDropdown === index
                         ? 'opacity-100 translate-y-0 visible'
                         : 'opacity-0 -translate-y-2 invisible'
@@ -113,13 +136,47 @@ const ModernNavbar = () => {
                   >
                     <div className="py-2">
                       {item.dropdown.map((dropdownItem, dropdownIndex) => (
-                        <button
-                          key={dropdownIndex}
-                          onClick={() => handleNavClick(dropdownItem.to)}
-                          className="block w-full text-left px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-blue-700/50 transition-all duration-200 border-l-2 border-transparent hover:border-blue-400"
-                        >
-                          {dropdownItem.name}
-                        </button>
+                        <div key={dropdownIndex} className="relative">
+                          {dropdownItem.hasNested ? (
+                            <div className="group/nested">
+                              <button
+                                onClick={() => handleNestedDropdownToggle(dropdownIndex)}
+                                className="w-full flex items-center justify-between px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-blue-700/50 transition-all duration-200 border-l-2 border-transparent hover:border-blue-400"
+                              >
+                                {dropdownItem.name}
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
+                              
+                              {/* Nested Dropdown */}
+                              <div
+                                className={`absolute left-full top-0 ml-2 w-64 bg-slate-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-blue-500/20 transform transition-all duration-300 ${
+                                  activeNestedDropdown === dropdownIndex
+                                    ? 'opacity-100 translate-x-0 visible'
+                                    : 'opacity-0 -translate-x-2 invisible'
+                                }`}
+                              >
+                                <div className="py-2">
+                                  {dropdownItem.nested.map((nestedItem, nestedIndex) => (
+                                    <button
+                                      key={nestedIndex}
+                                      onClick={() => handleNavClick(nestedItem.to)}
+                                      className="block w-full text-left px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-blue-700/50 transition-all duration-200 border-l-2 border-transparent hover:border-blue-400"
+                                    >
+                                      {nestedItem.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleNavClick(dropdownItem.to)}
+                              className="block w-full text-left px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-blue-700/50 transition-all duration-200 border-l-2 border-transparent hover:border-blue-400"
+                            >
+                              {dropdownItem.name}
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -182,13 +239,45 @@ const ModernNavbar = () => {
                     : 'max-h-0 opacity-0 overflow-hidden'
                 }`}>
                   {item.dropdown.map((dropdownItem, dropdownIndex) => (
-                    <button
-                      key={dropdownIndex}
-                      onClick={() => handleNavClick(dropdownItem.to)}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-blue-700/30 rounded-lg transition-all duration-200 border-l-2 border-blue-500/30 ml-4"
-                    >
-                      {dropdownItem.name}
-                    </button>
+                    <div key={dropdownIndex}>
+                      {dropdownItem.hasNested ? (
+                        <div>
+                          <button
+                            onClick={() => handleNestedDropdownToggle(dropdownIndex)}
+                            className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-blue-700/30 rounded-lg transition-all duration-200 border-l-2 border-blue-500/30 ml-4"
+                          >
+                            {dropdownItem.name}
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                              activeNestedDropdown === dropdownIndex ? 'rotate-180' : ''
+                            }`} />
+                          </button>
+                          
+                          {/* Mobile Nested Dropdown */}
+                          <div className={`ml-6 space-y-1 transition-all duration-300 ${
+                            activeNestedDropdown === dropdownIndex 
+                              ? 'max-h-screen opacity-100' 
+                              : 'max-h-0 opacity-0 overflow-hidden'
+                          }`}>
+                            {dropdownItem.nested.map((nestedItem, nestedIndex) => (
+                              <button
+                                key={nestedIndex}
+                                onClick={() => handleNavClick(nestedItem.to)}
+                                className="block w-full text-left px-4 py-2 text-xs text-gray-500 hover:text-white hover:bg-blue-700/20 rounded-lg transition-all duration-200 border-l-2 border-blue-500/20 ml-6"
+                              >
+                                {nestedItem.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleNavClick(dropdownItem.to)}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-blue-700/30 rounded-lg transition-all duration-200 border-l-2 border-blue-500/30 ml-4"
+                        >
+                          {dropdownItem.name}
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

@@ -49,7 +49,7 @@ const styles = `
 
   .contact-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 2rem;
   }
 
@@ -603,7 +603,7 @@ const ContactSection = () => {
               <p className="contact-info">{method.subtitle}</p>
               <div className="contact-action">
                 <span>{method.action}</span>
-                <ChevronRight size={16} />
+                <ChevronRight size={10} />
               </div>
             </div>
           ))}

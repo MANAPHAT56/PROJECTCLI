@@ -3,12 +3,16 @@ CREATE TABLE Categories (
   name VARCHAR(100) NOT NULL,
   image_path VARCHAR(500) ,
   icon VARCHAR(100) NOT NULL,
-  graint VARCHAR(100) DEFAULT '0', 
+  gradient VARCHAR(100) DEFAULT 'from-purple-600 to-blue-600', 
 );
 CREATE TABLE subcategories (
   id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
   image_path VARCHAR(500)  -- เก็บ path หรือ URL รูปภาพหมวดหมู่
   category_id INT NOT NULL,
+    icon VARCHAR,
+  gradient VARCHAR(100) DEFAULT 'from-purple-600 to-blue-600',
+  bgGradient VARCHAR(100) DEFAULT 'from-purple-600 to-blue-600',
+  accentColor VARCHAR(100) DEFAULT '#FFFFFF',
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 );

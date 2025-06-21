@@ -8,6 +8,7 @@ const articlesRouter = require('./routes/articles');
 const newsRouter = require('./routes/news');
 const cors = require('cors');
 app.use(cors({
+   origin: 'http://localhost:5173',
   methods: ['GET', 'POST'],
   credentials: true,
 }));
