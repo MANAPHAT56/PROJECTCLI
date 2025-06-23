@@ -46,7 +46,7 @@ const ModernNavbar = () => {
     { name: 'ขั้นตอนการสั่งซื้อ', to: '#', icon: ShoppingCart },
     { name: 'โชว์รูม', to: '#', icon: Building },
     { name: 'ผลงาน', to: '#', icon: Award },
-    { name: 'เกี่ยวกับเรา', to: '#', icon: Users },
+    { name: 'เกี่ยวกับเรา', to: '/Aboutus', icon: Users },
     { name: 'ติดต่อเรา', to: '#', icon: Phone },
     { name: 'บทความ', to: '#', icon: FileText },
     { name: 'ข่าวสารกิจกรรม', to: '#', icon: Calendar }
@@ -93,7 +93,7 @@ const ModernNavbar = () => {
                 <span className="text-white font-bold text-lg">L</span>
               </div>
               <span className="text-white font-bold text-xl bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">
-                YourBrand
+                โพธิ์ทอง
               </span>
             </div>
           </div>

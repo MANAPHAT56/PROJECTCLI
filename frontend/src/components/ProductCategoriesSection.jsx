@@ -1,609 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Phone, Mail, Search, ChevronRight } from 'lucide-react';
-
-// CSS Styles as a separate object (simulating external CSS file)
-const styles = `
-  .shop-container {
-    min-height: 100vh;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-
-  /* Contact Section Styles */
-  .contact-section {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    padding: 3rem 1rem;
-    position: relative;
-    overflow: hidden;
-    margin-top: 3rem;
-  }
-
-  .contact-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 30% 40%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-  }
-
-  .contact-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    position: relative;
-    z-index: 1;
-  }
-
-  .contact-title {
-    text-align: center;
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: white;
-    margin-bottom: 3rem;
-    background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .contact-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 2rem;
-  }
-
-  .contact-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1.5rem;
-    padding: 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .contact-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-    transition: left 0.6s ease;
-  }
-
-  .contact-card:hover::before {
-    left: 100%;
-  }
-
-  .contact-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 25px 50px rgba(59, 130, 246, 0.25);
-    border-color: rgba(59, 130, 246, 0.3);
-    background: rgba(59, 130, 246, 0.1);
-  }
-
-  .contact-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 1.5rem;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 2rem;
-    transition: all 0.4s ease;
-    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
-  }
-
-  .contact-card:hover .contact-icon {
-    transform: scale(1.15) rotate(5deg);
-    box-shadow: 0 15px 40px rgba(59, 130, 246, 0.4);
-  }
-
-  .contact-method {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: white;
-    margin-bottom: 0.5rem;
-  }
-
-  .contact-info {
-    color: #cbd5e1;
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-  }
-
-  .contact-action {
-    color: #60a5fa;
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition: all 0.3s ease;
-  }
-
-  .contact-card:hover .contact-action {
-    color: #93c5fd;
-    transform: translateX(5px);
-  }
-
-  /* Products Section Styles */
-  .products-section {
-    background: linear-gradient(to bottom, #f8fafc, #e2e8f0);
-    padding: 4rem 1rem;
-    position: relative;
-  }
-
-  .products-container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .section-title {
-    text-align: center;
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: #1e293b;
-    margin-bottom: 3rem;
-    position: relative;
-  }
-
-  .section-title::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 4px;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    border-radius: 2px;
-  }
-
-  .products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-    margin-bottom: 3rem;
-  }
-
-  .product-card {
-    background: white;
-    border-radius: 1.5rem;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid #f1f5f9;
-    position: relative;
-  }
-
-  .product-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-    border-color: #3b82f6;
-  }
-
-  .product-image {
-    position: relative;
-    overflow: hidden;
-    height: 220px;
-    background: #f8fafc;
-  }
-
-  .product-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.6s ease;
-  }
-
-  .product-card:hover .product-image img {
-    transform: scale(1.1);
-  }
-
-  .product-badge {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-  }
-
-  .product-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(29, 78, 216, 0.9));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: all 0.4s ease;
-    backdrop-filter: blur(2px);
-  }
-
-  .product-card:hover .product-overlay {
-    opacity: 1;
-  }
-
-  .product-overlay-btn {
-    background: white;
-    color: #1e293b;
-    border: none;
-    padding: 1rem 1.5rem;
-    border-radius: 2rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transform: translateY(20px);
-  }
-
-  .product-card:hover .product-overlay-btn {
-    transform: translateY(0);
-  }
-
-  .product-overlay-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  }
-
-  .product-info {
-    padding: 1.5rem;
-  }
-
-  .product-category {
-    color: #3b82f6;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 0.5rem;
-  }
-
-  .product-name {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 1rem;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .product-price {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: #3b82f6;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .show-more-btn {
-    display: block;
-    margin: 0 auto;
-    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    color: white;
-    border: none;
-    padding: 1.2rem 3rem;
-    border-radius: 3rem;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.4s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
-  }
-
-  .show-more-btn:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 20px 40px rgba(59, 130, 246, 0.4);
-  }
-
-  /* Categories Section Styles */
-  .categories-section {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    padding: 4rem 1rem;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .categories-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 70% 60%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-  }
-
-  .categories-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    position: relative;
-    z-index: 1;
-  }
-
-  .categories-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .category-card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1.5rem;
-    padding: 2rem 1rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .category-card:hover {
-    transform: translateY(-8px) scale(1.05);
-    box-shadow: 0 25px 50px rgba(59, 130, 246, 0.25);
-    background: rgba(59, 130, 246, 0.1);
-    border-color: rgba(59, 130, 246, 0.3);
-  }
-
-  .category-icon {
-    font-size: 3.5rem;
-    margin-bottom: 1rem;
-    transition: all 0.4s ease;
-    display: block;
-  }
-
-  .category-card:hover .category-icon {
-    transform: scale(1.2) rotate(5deg);
-  }
-
-  .category-name {
-    font-weight: 700;
-    color: white;
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-    transition: color 0.3s ease;
-  }
-
-  .category-card:hover .category-name {
-    color: #93c5fd;
-  }
-
-  .category-count {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-
-  /* Mobile Responsive Styles */
-  @media (max-width: 768px) {
-    .contact-section {
-      padding: 2rem 0.5rem;
-    }
-
-    .contact-title {
-      font-size: 1.8rem;
-      margin-bottom: 2rem;
-    }
-
-    .contact-grid {
-      grid-template-columns: 1fr;
-      gap: 1rem;
-    }
-
-    .contact-card {
-      padding: 1.5rem;
-    }
-
-    .contact-icon {
-      width: 60px;
-      height: 60px;
-      font-size: 1.5rem;
-    }
-
-    .contact-method {
-      font-size: 1.2rem;
-    }
-
-    .contact-info {
-      font-size: 1rem;
-    }
-
-    .products-section {
-      padding: 2.5rem 0.5rem;
-    }
-
-    .section-title {
-      font-size: 1.8rem;
-      margin-bottom: 2rem;
-    }
-
-    .products-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-    }
-
-    .product-card {
-      border-radius: 1rem;
-    }
-
-    .product-image {
-      height: 160px;
-    }
-
-    .product-info {
-      padding: 1rem;
-    }
-
-    .product-name {
-      font-size: 1rem;
-    }
-
-    .product-price {
-      font-size: 1.4rem;
-    }
-
-    .show-more-btn {
-      padding: 1rem 2rem;
-      font-size: 1rem;
-    }
-
-    .categories-section {
-      padding: 2.5rem 0.5rem;
-    }
-
-    .categories-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-    }
-
-    .category-card {
-      padding: 1.5rem 1rem;
-    }
-
-    .category-icon {
-      font-size: 2.5rem;
-    }
-
-    .category-name {
-      font-size: 0.9rem;
-    }
-
-    .category-count {
-      font-size: 0.8rem;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .contact-title {
-      font-size: 1.5rem;
-    }
-
-    .section-title {
-      font-size: 1.5rem;
-    }
-
-    .products-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .product-image {
-      height: 200px;
-    }
-
-    .categories-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  /* Animation Classes */
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .animate-fade-in {
-    animation: fadeInUp 0.6s ease forwards;
-  }
-
-  .animate-delay-1 {
-    animation-delay: 0.1s;
-  }
-
-  .animate-delay-2 {
-    animation-delay: 0.2s;
-  }
-
-  .animate-delay-3 {
-    animation-delay: 0.3s;
-  }
-
-  .animate-delay-4 {
-    animation-delay: 0.4s;
-  }
-`;
-
+import { useNavigate } from 'react-router-dom';
 // Contact Section Component
 const ContactSection = () => {
   const contactMethods = [
     {
-      icon: <MessageCircle size={16} />,
+      icon: <MessageCircle size={20} />,
       title: "Line",
       subtitle: "@yourshop",
       action: "เพิ่มเพื่อน"
     },
     {
-      icon: <MessageCircle size={16} />,
+      icon: <MessageCircle size={20} />,
       title: "Messenger", 
       subtitle: "m.me/yourshop",
       action: "ส่งข้อความ"
     },
     {
-      icon: <Phone size={16} />,
+      icon: <Phone size={20} />,
       title: "โทรศัพท์",
       subtitle: "02-123-4567",
       action: "โทรเลย"
     },
     {
-      icon: <Mail size={16} />,
+      icon: <Mail size={20} />,
       title: "อีเมล",
       subtitle: "info@yourshop.com", 
       action: "ส่งเมล"
     }
   ];
-
   return (
-    <div className="contact-section">
-      <div className="contact-container">
-        <h2 className="contact-title">ติดต่อเราได้ที่</h2>
-        <div className="contact-grid">
+    <div className="bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-700 py-12 md:py-16 px-4 relative overflow-hidden mt-12">
+      {/* Background Decoration */}
+      <div className="absolute inset-0 bg-gradient-radial from-blue-500/10 via-transparent to-transparent pointer-events-none"></div>
+      
+      <div className="max-w-6xl mx-auto relative z-10">
+        <h2 className="text-center text-3xl md:text-4xl font-extrabold text-white mb-8 md:mb-12 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+          ติดต่อเราได้ที่
+        </h2> 
+        
+        {/* Mobile: 2 columns, Desktop: 4 columns */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8">
           {contactMethods.map((method, index) => (
             <div
               key={index}
-              className={`contact-card animate-fade-in animate-delay-${index + 1}`}
+              className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-8 text-center cursor-pointer transition-all duration-500 hover:transform hover:-translate-y-2 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25 hover:border-blue-500/30 hover:bg-blue-500/10 group relative overflow-hidden"
             >
-              <div className="contact-icon">
+              {/* Shimmer Effect */}
+              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+              
+              {/* Icon - smaller on mobile */}
+              <div className="w-12 h-12 md:w-20 md:h-20 mx-auto mb-3 md:mb-6 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg shadow-blue-500/30">
                 {method.icon}
               </div>
-              <h3 className="contact-method">{method.title}</h3>
-              <p className="contact-info">{method.subtitle}</p>
-              <div className="contact-action">
+              
+              {/* Content - smaller text on mobile */}
+              <h3 className="text-sm md:text-xl font-bold text-white mb-1 md:mb-2">{method.title}</h3>
+              <p className="text-slate-300 mb-3 md:mb-6 text-xs md:text-base">{method.subtitle}</p>
+              <div className="text-yellow-400 text-xs md:text-sm font-semibold flex items-center justify-center gap-1 md:gap-2 transition-all duration-300 group-hover:text-blue-300 group-hover:translate-x-1">
                 <span>{method.action}</span>
-                <ChevronRight size={10} />
+                <ChevronRight size={12} className="md:w-4 md:h-4" />
               </div>
             </div>
           ))}
@@ -615,70 +71,164 @@ const ContactSection = () => {
 
 // New Products Section Component
 const NewProductsSection = () => {
-   
-  const [showAll, setShowAll] = useState(false);
+    const [showAll, setShowAll] = useState(false);
   const [products,setProducts] = useState([]);
-  
+  const navigate = useNavigate();
+const navigateToProduct = (productId) =>{
+    navigate(`/detailProducts/${productId}`);
+  }
    useEffect(() => {
     fetch(`http://localhost:5000/api/store/newproductsHome`)
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error('Error fetching categories:', err));
   }, []);
-   
-    // useEffect(() => {
-    //   const initial = {};
-    //   products.forEach(subcatP => {
-    //     initial[subcatP.id]=products.length;
-    //   });
-    //      setTimeout(() => {
-    //   setLoading(false);
-    // }, 1000);
-    // });
+  
   const displayedProducts = showAll ? products : products.slice(0, 4);
 
   return (
-    <div className="products-section">
-      <div className="products-container">
-        <h2 className="section-title">สินค้ามาใหม่</h2>
-        <div className="products-grid">
+    <div className="bg-gradient-to-b from-slate-50 to-slate-200 py-12 md:py-16 px-4">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-center text-2xl md:text-4xl font-extrabold text-slate-800 mb-8 md:mb-12 relative">
+          สินค้ามาใหม่
+          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 md:w-20 h-1 bg-gradient-to-r from-blue-500 to-blue-700 rounded"></div>
+        </h2>
+        
+        {/* Mobile: 2 columns, Desktop: 4 columns */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8 mb-8 md:mb-12">
           {displayedProducts.map((product, index) => (
             <div
               key={product.id}
-              className={`product-card animate-fade-in animate-delay-${(index % 4) + 1}`}
+              className="bg-white rounded-lg md:rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:transform hover:-translate-y-2 border border-slate-200 hover:border-blue-500 group"
             >
-              <div className="product-image">
+              <div className="relative overflow-hidden h-32 md:h-56 bg-slate-100">
                 <img
                   src={product.image}
                   alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   loading="lazy"
                 />
-                <div className="product-overlay">
-                  <button className="product-overlay-btn">
-                    <Search size={16} />
-                    <span>ดูรายละเอียด</span>
+                
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-blue-800/90 opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center backdrop-blur-sm">
+                  <button onClick={()=>navigateToProduct(product.id)} className="bg-white text-slate-800 px-3 py-1.5 md:px-6 md:py-3 rounded-full font-semibold flex items-center gap-1 md:gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 hover:scale-105 shadow-lg text-xs md:text-base">
+                    <Search size={12} className="md:w-4 md:h-4" />
+                    <span className="hidden md:inline">ดูรายละเอียด</span>
+                    <span className="md:hidden">ดู</span>
                   </button>
                 </div>
-                <div className="product-badge">ใหม่</div>
+                
+                {/* Badge */}
+                <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-1 md:px-4 md:py-2 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
+                  ใหม่
+                </div>
               </div>
-              <div className="product-info">
-                <span className="product-category">{product.category}</span>
-                <h3 className="product-name">{product.name}</h3>
-                <div className="product-price">
-                  <span>฿{product.price}</span>
-                  <ChevronRight size={20} />
+              
+              <div className="p-3 md:p-6">
+                <span className="text-blue-600 text-xs font-bold uppercase tracking-wide mb-1 md:mb-2 block">{product.category}</span>
+                <h3 className="font-bold text-slate-800 mb-2 md:mb-4 text-sm md:text-xl line-clamp-2 leading-tight">
+                  {product.name}
+                </h3>
+                <div className="flex items-center justify-between">
+                  <span className="text-lg md:text-2xl font-extrabold text-blue-600">฿{product.price}</span>
+                  <ChevronRight size={16} className="md:w-5 md:h-5 text-slate-400" />
                 </div>
               </div>
             </div>
           ))}
         </div>
+        
         {!showAll && (
-          <button
-            onClick={() => setShowAll(true)}
-            className="show-more-btn"
-          >
-            ดูสินค้าเพิ่มเติม
-          </button>
+          <div className="text-center">
+            <button
+              onClick={() => setShowAll(true)}
+              className="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-6 py-3 md:px-12 md:py-4 rounded-full text-sm md:text-lg font-bold uppercase tracking-wide transition-all duration-500 hover:transform hover:-translate-y-1 hover:scale-105 shadow-lg hover:shadow-2xl hover:shadow-blue-500/40"
+            >
+              ดูสินค้าเพิ่มเติม
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+const TopsellerProductsSection = () => {
+    const [showAll, setShowAll] = useState(false);
+  const [products,setProducts] = useState([]);
+   const navigate = useNavigate();
+const navigateToProduct = (productId) =>{
+    navigate(`/detailProducts/${productId}`);
+  }
+   useEffect(() => {
+    fetch(`http://localhost:5000/api/store/topsellerHome`)
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error('Error fetching categories:', err));
+  }, []);
+  
+  const displayedProducts = showAll ? products : products.slice(0, 4);
+
+  return (
+    <div className="bg-gradient-to-b from-slate-50 to-slate-200 py-12 md:py-16 px-4">
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-center text-2xl md:text-4xl font-extrabold text-slate-800 mb-8 md:mb-12 relative">
+          สินค้ายอดขายสูงสุด
+          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 md:w-20 h-1 bg-gradient-to-r from-blue-500 to-blue-700 rounded"></div>
+        </h2>
+        
+        {/* Mobile: 2 columns, Desktop: 4 columns */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8 mb-8 md:mb-12">
+          {displayedProducts.map((product, index) => (
+            <div
+              key={product.id}
+              className="bg-white rounded-lg md:rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:transform hover:-translate-y-2 border border-slate-200 hover:border-blue-500 group"
+            >
+              <div className="relative overflow-hidden h-32 md:h-56 bg-slate-100">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  loading="lazy"
+                />
+                
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-blue-800/90 opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center backdrop-blur-sm">
+                  <button   onClick={() => navigateToProduct(product.id)} className="bg-white text-slate-800 px-3 py-1.5 md:px-6 md:py-3 rounded-full font-semibold flex items-center gap-1 md:gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 hover:scale-105 shadow-lg text-xs md:text-base">
+                    <Search size={12} className="md:w-4 md:h-4" />
+                    <span className="hidden md:inline">ดูรายละเอียด</span>
+                    <span className="md:hidden">ดู</span>
+                  </button>
+                </div>
+                
+                {/* Badge */}
+                <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-1 md:px-4 md:py-2 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
+                  ใหม่
+                </div>
+              </div>
+              
+              <div className="p-3 md:p-6">
+                <span className="text-blue-600 text-xs font-bold uppercase tracking-wide mb-1 md:mb-2 block">{product.category}</span>
+                <h3 className="font-bold text-slate-800 mb-2 md:mb-4 text-sm md:text-xl line-clamp-2 leading-tight">
+                  {product.name}
+                </h3>
+                <div className="flex items-center justify-between">
+                  <span className="text-lg md:text-2xl font-extrabold text-blue-600">฿{product.price}</span>
+                  <ChevronRight size={16} className="md:w-5 md:h-5 text-slate-400" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {!showAll && (
+          <div className="text-center">
+            <button
+              onClick={() => setShowAll(true)}
+              className="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-6 py-3 md:px-12 md:py-4 rounded-full text-sm md:text-lg font-bold uppercase tracking-wide transition-all duration-500 hover:transform hover:-translate-y-1 hover:scale-105 shadow-lg hover:shadow-2xl hover:shadow-blue-500/40"
+            >
+              ดูสินค้าเพิ่มเติม
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -701,18 +251,35 @@ const ProductCategoriesSection = () => {
   ];
 
   return (
-    <div className="categories-section">
-      <div className="categories-container">
-        <h2 className="section-title" style={{color: 'white'}}>หมวดหมู่สินค้า</h2>
-        <div className="categories-grid">
+  <div className="bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-700 py-12 md:py-16 px-4 relative overflow-hidden">
+
+      {/* Background Decoration */}
+      <div className="absolute inset-0 bg-gradient-radial from-blue-500/10 via-transparent to-transparent pointer-events-none"></div>
+      
+      <div className="max-w-6xl mx-auto relative z-10">
+        <h2 className="text-center text-2xl md:text-4xl font-extrabold text-white mb-8 md:mb-12 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+          หมวดหมู่สินค้า
+        </h2>
+        
+        {/* Mobile: 3 columns, Desktop: 5 columns */}
+        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-6">
           {categories.map((category, index) => (
             <div
               key={index}
-              className={`category-card animate-fade-in animate-delay-${(index % 4) + 1}`}
+              className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-lg md:rounded-2xl p-3 md:p-8 text-center cursor-pointer transition-all duration-500 hover:transform hover:-translate-y-2 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25 hover:bg-blue-500/10 hover:border-blue-500/30 group relative overflow-hidden"
             >
-              <div className="category-icon">{category.icon}</div>
-              <h3 className="category-name">{category.name}</h3>
-              <p className="category-count">{category.count} สินค้า</p>
+              {/* Icon - smaller on mobile */}
+              <div className="text-2xl md:text-6xl mb-2 md:mb-4 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
+                {category.icon}
+              </div>
+              
+              {/* Content - smaller text on mobile */}
+              <h3 className="font-bold text-white mb-1 md:mb-2 text-xs md:text-base leading-tight transition-colors duration-300 group-hover:text-blue-300">
+                {category.name}
+              </h3>
+              <p className="text-white/70 text-xs md:text-sm font-medium">
+                {category.count} สินค้า
+              </p>
             </div>
           ))}
         </div>
@@ -723,21 +290,11 @@ const ProductCategoriesSection = () => {
 
 // Main App Component
 const App = () => {
-  useEffect(() => {
-    // Inject styles
-    const styleSheet = document.createElement("style");
-    styleSheet.textContent = styles;
-    document.head.appendChild(styleSheet);
-
-    return () => {
-      document.head.removeChild(styleSheet);
-    };
-  }, []);
-
   return (
-    <div className="shop-container">
+    <div className="min-h-screen font-sans">
       <ContactSection />
       <NewProductsSection />
+      <TopsellerProductsSection />
       <ProductCategoriesSection />
     </div>
   );

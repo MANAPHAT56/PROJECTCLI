@@ -19,16 +19,24 @@ import {
   Grid3x3,
   ThumbsUp
 } from 'lucide-react';
-import { useParams } from 'react-router-dom'; 
+import { useParams,useNavigate } from 'react-router-dom'; 
 const SubcategoryProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [productData,setproductData ] = useState({}) ;
+    const [relatedProducts,setproductDataRelated ] = useState({}) ;
   // const [isFavorite, setIsFavorite] = useState(false);
   const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(true);
   // const [selectedVariant, setSelectedVariant] = useState(0);
   const [animatedElements, setAnimatedElements] = useState(new Set());
   const [activeTab, setActiveTab] = useState('description');
+  const navigate=useNavigate();
+     const handleViewDetails = (productId) => {
+    console.log(productId)
+    // Here you would typically navigate to product details page
+    navigate(`/detailProducts/${productId}`)
+     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
        const { productId } = useParams(); // ✅ ดึงค่าจาก URL
        console.log(productId);
  useEffect(() => {
@@ -72,41 +80,12 @@ const SubcategoryProductDetail = () => {
   //   // ],
   //   tags: ["ขายดี", "ยอดขายสูงสุด", "ใหม่ล่าสุด", "แนะนำ"]
   // };
-  const relatedProducts = [
-    {
-      id: 2,
-      name: "โต๊ะกลางไม้สัก Modern",
-      price: "฿8,900",
-      image: "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=400&h=300&fit=crop",
-      rating: 4.6,
-      reviews: 89
-    },
-    {
-      id: 3,
-      name: "เก้าอี้พักผ่อน Relax",
-      price: "฿12,500",
-      image: "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=400&h=300&fit=crop",
-      rating: 4.7,
-      reviews: 156
-    },
-    {
-      id: 4,
-      name: "โคมไฟตั้งพื้น LED",
-      price: "฿3,200",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop",
-      rating: 4.5,
-      reviews: 234
-    },
-    {
-      id: 5,
-      name: "พรมปูพื้น Persian Style",
-      price: "฿4,800",
-      image: "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=400&h=300&fit=crop",
-      rating: 4.8,
-      reviews: 78
-    }
-  ];
-
+   useEffect(() => {
+    fetch(`http://localhost:5000/api/store/RealatedPdeatail/${productId}`)
+      .then(res => res.json())
+      .then(data => setproductDataRelated(data))
+      .catch(err => console.error('Error fetching categories:', err));
+  }, [productId]);
   useEffect(() => {
     const timer = setTimeout(() => {
       setAnimatedElements(new Set(['hero', 'gallery', 'info', 'related']));
@@ -440,6 +419,7 @@ const SubcategoryProductDetail = () => {
   );
 
   const RelatedProducts = () => (
+    
     <div className={`transition-all duration-1000 delay-700 ${
       animatedElements.has('related') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
     }`}>
@@ -469,7 +449,7 @@ const SubcategoryProductDetail = () => {
               <span className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
                 {product.price}
               </span>
-              <button className="p-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-full hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-110">
+              <button onClick={()=>handleViewDetails(product.id)} className="p-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-full hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-110">
                 <Eye size={16} />
               </button>
             </div>
@@ -583,7 +563,7 @@ const SubcategoryProductDetail = () => {
                 <div className="flex items-center space-x-2">
                   <Award className="text-cyan-400" size={16} />
                   <span className="text-gray-300 text-sm">รับสิทธิพิเศษก่อนใคร</span>
-                </div>
+                </div>  
               </div>
             </div>
           </div>

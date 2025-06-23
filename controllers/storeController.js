@@ -288,3 +288,46 @@ exports.getNewProducts = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+exports.getTopseller = async(req,res)=>{
+  const [rows] = await db.query(`
+  SELECT 
+    p.id,
+    p.name,
+    p.price,
+    p.description,
+    p.image_Main_path,
+    p.image_Sub_path,
+    p.monthly_purchases,
+    p.total_purchases,
+    c.name AS category,
+    s.name AS subcategory
+  FROM Products p
+  JOIN Categories c ON p.category_id = c.id
+  JOIN subcategories s ON p.subcategory_id = s.id
+  ORDER BY p.total_purchases DESC
+  LIMIT 8
+`);
+
+res.json(rows);
+}
+exports.getRelatedP_detail = async(req,res)=>{
+  const productId = req.params.productId;
+
+const [related] = await db.query(`
+  SELECT 
+    id, 
+    name, 
+    CONCAT('฿', FORMAT(price, 0)) AS price,
+    image_Main_path AS image
+  FROM Products
+  WHERE category_id = (
+    SELECT category_id FROM Products WHERE id = ?
+  ) 
+  AND id != ?
+  ORDER BY RAND()
+  LIMIT 4
+`, [productId, productId]);
+
+res.json(related);
+}

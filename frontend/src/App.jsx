@@ -6,6 +6,7 @@ const ProductsEachCategories = React.lazy(() => import('./components/ProductsEac
 import ProductEachSubCategories from './components/ProductEachSubCategories';
 import ProductsDetail from './components/ProductsDetail';
 import Productinsubcategory from './components/Productinsubcategory';
+import Aboutus from './components/Aboutus';
 // import Home from './pages/Home';
 // import ProductsAll from './pages/ProductsAll';
 // import ProductsRecommended from './pages/ProductsRecommended';
@@ -58,6 +59,15 @@ const App = () => {
           element={
             <>
               <Productinsubcategory />
+            </>
+            
+          }
+        />
+          <Route
+          path="/Aboutus"
+          element={
+            <>
+              <Aboutus />
             </>
             
           }

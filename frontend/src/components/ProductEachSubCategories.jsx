@@ -137,25 +137,21 @@ const ProductShowcase = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-purple-200 via-violet-200 to-fuchsia-200 py-12">
-        <div className="absolute inset-0 bg-white/30"></div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-sky-400 to-cyan-300 py-10">
+        <div className="absolute inset-0 bg-white/5"></div>
         <div className="container mx-auto px-4 max-w-7xl relative z-10">
-          <div className="text-center animate-fade-in">
-            <h1 className="text-3xl md:text-5xl font-bold text-slate-800 mb-4 bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
-              ร้านค้าออนไลน์
+          <div className="mt-20 text-center animate-fade-in">
+            <h1 className="text-3xl md:text-5xl font-bold text-slate-800 mb-4 bg-gradient-to-br from-black via-gray-900 to-blue-600 bg-clip-text text-transparent">
+              โพธิ์ทอง พริ้นติ้ง
             </h1>
             <p className="text-base md:text-lg text-slate-700 mb-6 max-w-2xl mx-auto">
-              ค้นพบสินค้าคุณภาพดี ราคาดี จากทุกหมวดหมู่ในที่เดียว
+              ค้นพบสินค้าคุณภาพดี ราคาดี จากทุกหมวดหมู่ในที่เดียว  
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm">
               <div className="flex items-center text-slate-600">
                 <Star className="text-amber-500 mr-1" size={16} fill="currentColor" />
-                <span>4.8 คะแนนเฉลี่ย</span>
+                <span>รับสกรีนโลโก้ทุกรูปเเบบ</span>
               </div>
-              <div className="hidden sm:block text-slate-600">•</div>
-              <div className="text-slate-600">10,000+ สินค้า</div>
-              <div className="hidden sm:block text-slate-600">•</div>
-              <div className="text-slate-600">ส่งฟรีทั่วไทย</div>
             </div>
           </div>
         </div>
