@@ -258,3 +258,33 @@ exports.getProductDetail = async(req,res)=>{
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+exports.getNewProducts = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        p.id,
+        p.name,
+        p.price,
+        p.image_Main_path AS image,
+        c.name AS category
+      FROM Products p
+      JOIN Categories c ON p.category_id = c.id
+      WHERE p.created_at >= NOW() - INTERVAL 7 DAY
+      ORDER BY RAND()
+      LIMIT 8
+    `);
+
+    const formatted = rows.map(product => ({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price).toLocaleString(), // ใส่ , คั่นหลักพัน
+      image: product.image,
+      category: product.category
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Error fetching new products:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

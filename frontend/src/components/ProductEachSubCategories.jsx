@@ -15,6 +15,10 @@ const ProductShowcase = () => {
     navigate(`/P_insubcategory/${subcategoryId}`);
     // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
   };
+  const navigateToProduct = (productId) =>{
+    navigate(`/detailProducts/${productId}`);
+  }
+  
  useEffect(() => {
   fetch(`http://localhost:5000/api/store/subcategories/${categoryId}`)
     .then(res => res.json())
@@ -118,11 +122,11 @@ const ProductShowcase = () => {
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-purple-600">{product.price}</span>
           <div className="flex space-x-1">
-            <button className="p-1.5 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors">
+            {/* <button  className="p-1.5 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors">
               <Eye size={14} />
-            </button>
-            <button className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
-              <ShoppingCart size={14} />
+            </button> */}
+            <button  onClick={() => navigateToProduct(product.id)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
+              <ShoppingCart size={14} /> 
             </button>
           </div>
         </div>

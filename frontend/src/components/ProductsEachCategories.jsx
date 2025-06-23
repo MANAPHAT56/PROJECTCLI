@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const ProductShowcase = () => {
   const navigate = useNavigate();
   const [visibleProducts, setVisibleProducts] = useState({});
-  const [favorites, setFavorites] = useState(new Set());
+    const [favorites, setFavorites] = useState(new Set());
   const [animatedCards, setAnimatedCards] = useState(new Set());
    const [categories, setCategories] = useState([]);
    useEffect(() => {
@@ -66,6 +66,13 @@ const ProductShowcase = () => {
     navigate(`/category/${categoryId}`);
     // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
   };
+    const navigateToProduct = (productId) => {
+    // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
+    // ในระบบจริงจะเป็นแบบนี้:  
+ navigate(`/detailProducts/${productId}`)
+    // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
+  };
+
 
   const ProductCard = ({ product, index }) => {
     const isAnimated = animatedCards.has(product.id);
@@ -118,10 +125,10 @@ const ProductShowcase = () => {
         <div className="flex items-center justify-between">
           <span className="text-lg sm:text-xl lg:text-2xl font-bold text-sky-600">{product.price}</span>
           <div className="flex space-x-1 sm:space-x-2">
-            <button className="p-1.5 sm:p-2 rounded-full bg-sky-100 text-sky-600 hover:bg-sky-200 transition-colors">
+            {/* <button className="p-1.5 sm:p-2 rounded-full bg-sky-100 text-sky-600 hover:bg-sky-200 transition-colors">
               <Eye size={14} />
-            </button>
-            <button className="p-1.5 sm:p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors">
+            </button> */}
+            <button onClick={() => navigateToProduct(product.id)} className="p-1.5 sm:p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors">
               <ShoppingCart size={14} />
             </button>
           </div>

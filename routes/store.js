@@ -13,4 +13,5 @@ router.get('/preview/:categoryId', storeController.getCategoryPreview);
 router.get('/category/:categoryId', storeController.getCategoryProducts);
 router.get('/subcategoryP/:subcategoryId', storeController.getProductsInSCategory);
 router.get('/product/:productId',storeController.getProductDetail);
+router.get('/newproductsHome',storeController.getNewProducts);
 module.exports = router;

@@ -615,19 +615,26 @@ const ContactSection = () => {
 
 // New Products Section Component
 const NewProductsSection = () => {
+   
   const [showAll, setShowAll] = useState(false);
+  const [products,setProducts] = useState([]);
   
-  const products = [
-    { id: 1, name: "สมาร์ทโฟน Galaxy S24", price: "29,990", image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=300&fit=crop", category: "มือถือ" },
-    { id: 2, name: "แล็ปท็อป MacBook Air M2", price: "42,900", image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=300&fit=crop", category: "คอมพิวเตอร์" },
-    { id: 3, name: "หูฟัง AirPods Pro", price: "8,900", image: "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=300&h=300&fit=crop", category: "อุปกรณ์เสียง" },
-    { id: 4, name: "นาฬิกา Apple Watch", price: "12,900", image: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&h=300&fit=crop", category: "นาฬิกา" },
-    { id: 5, name: "แท็บเล็ต iPad Air", price: "21,900", image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop", category: "แท็บเล็ต" },
-    { id: 6, name: "กล้อง DSLR Canon", price: "35,900", image: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=300&h=300&fit=crop", category: "กล้อง" },
-    { id: 7, name: "เครื่องเล่นเกม PS5", price: "18,990", image: "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=300&h=300&fit=crop", category: "เกม" },
-    { id: 8, name: "ลำโพง JBL Charge", price: "4,990", image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop", category: "อุปกรณ์เสียง" }
-  ];
-
+   useEffect(() => {
+    fetch(`http://localhost:5000/api/store/newproductsHome`)
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error('Error fetching categories:', err));
+  }, []);
+   
+    // useEffect(() => {
+    //   const initial = {};
+    //   products.forEach(subcatP => {
+    //     initial[subcatP.id]=products.length;
+    //   });
+    //      setTimeout(() => {
+    //   setLoading(false);
+    // }, 1000);
+    // });
   const displayedProducts = showAll ? products : products.slice(0, 4);
 
   return (
