@@ -19,53 +19,59 @@ import {
   Grid3x3,
   ThumbsUp
 } from 'lucide-react';
-
+import { useParams } from 'react-router-dom'; 
 const SubcategoryProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
+  const [productData,setproductData ] = useState({}) ;
   // const [isFavorite, setIsFavorite] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState(0);
+    const [loading, setLoading] = useState(true);
+  // const [selectedVariant, setSelectedVariant] = useState(0);
   const [animatedElements, setAnimatedElements] = useState(new Set());
   const [activeTab, setActiveTab] = useState('description');
-
-  // Mock data - ในการใช้งานจริงจะมาจาก API
-  const productData = {
-    id: 1,
-    name: "โซฟาผ้า 3 ที่นั่ง Premium Comfort",
-    subcategory: "โซฟาและเก้าอี้",
-    category: "เฟอร์นิเจอร์ห้องนั่งเล่น",
-    sold: 1250,
-    description: "โซฟาผ้าคุณภาพพรีเมียม ออกแบบเพื่อความสะดวกสบายสูงสุด ผลิตจากผ้าคุณภาพดีนำเข้าจากยุโรป มีโครงสร้างไม้แข็งแรง ฟองน้ำหนาพิเศษ เหมาะสำหรับการนั่งเล่นและพักผ่อนในบ้าน",
-    features: [
-      "ผ้าคุณภาพสูงนำเข้าจากยุโรป ทนทานและไม่ซีดจาง",
-      "โครงสร้างไม้แข็งรับน้ำหนักได้ถึง 300 กก.",
-      "ฟองน้ำหนาพิเศษ 8 ซม. นั่งสบายไม่เมื่อย",
-      "ขนาดกำลังดี เหมาะสำหรับห้องขนาดกลาง",
-      "ดูแลรักษาง่าย ถอดซักได้",
-      "รับประกันโครงสร้าง 5 ปี"
-    ],
-    specifications: {
-      "ขนาด": "200 x 85 x 80 ซม.",
-      "วัสดุโครง": "ไม้ยางพารา",
-      "วัสดุเบาะ": "ฟองน้ำ High Density",
-      "วัสดุหุ้ม": "ผ้า Cotton Blend",
-      "น้ำหนัก": "45 กก.",
-      "รับน้ำหนัก": "300 กก."
-    },
-    images: [
-      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=800&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800&h=600&fit=crop"
-    ],
-    variants: [
-      { name: "สีเทาอ่อน", color: "#E5E7EB", inStock: true },
-      { name: "สีน้ำเงินเข้ม", color: "#1E40AF", inStock: true },
-      { name: "สีน้ำตาลอ่อน", color: "#92400E", inStock: false }
-    ],
-    tags: ["ขายดี", "แนะนำ", "ส่งฟรี", "ประกัน 5 ปี"]
-  };
-
+       const { productId } = useParams(); // ✅ ดึงค่าจาก URL
+       console.log(productId);
+ useEffect(() => {
+    fetch(`http://localhost:5000/api/store/product/${productId}`)
+      .then(res => res.json())
+      .then(data => setproductData(data))
+      .catch(err => console.error('Error fetching categories:', err));
+  }, [productId]);
+  
+    useEffect(() => {
+         setTimeout(() => {
+      setLoading(false);
+    }, 500);
+    });
+  
+  // const productData = {
+  //   id: 1,
+  //   name: "โซฟาผ้า 3 ที่นั่ง Premium Comfort",
+  //   subcategory: "โซฟาและเก้าอี้",
+  //   category: "เฟอร์นิเจอร์ห้องนั่งเล่น",
+  //   sold: 1250,
+  //   description: "โซฟาผ้าคุณภาพพรีเมียม ออกแบบเพื่อความสะดวกสบายสูงสุด ผลิตจากผ้าคุณภาพดีนำเข้าจากยุโรป มีโครงสร้างไม้แข็งแรง ฟองน้ำหนาพิเศษ เหมาะสำหรับการนั่งเล่นและพักผ่อนในบ้าน",
+  //   // specifications: {
+  //   //   "ขนาด": "200 x 85 x 80 ซม.",
+  //   //   "วัสดุโครง": "ไม้ยางพารา",
+  //   //   "วัสดุเบาะ": "ฟองน้ำ High Density",
+  //   //   "วัสดุหุ้ม": "ผ้า Cotton Blend",
+  //   //   "น้ำหนัก": "45 กก.",
+  //   //   "รับน้ำหนัก": "300 กก."
+  //   // },
+  //   images: [
+  //     "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&h=600&fit=crop",
+  //     "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&h=600&fit=crop",
+  //     "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=800&h=600&fit=crop",
+  //     "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800&h=600&fit=crop"
+  //   ],
+  //   // variants: [
+  //   //   { name: "สีเทาอ่อน", color: "#E5E7EB", inStock: true },
+  //   //   { name: "สีน้ำเงินเข้ม", color: "#1E40AF", inStock: true },
+  //   //   { name: "สีน้ำตาลอ่อน", color: "#92400E", inStock: false }
+  //   // ],
+  //   tags: ["ขายดี", "ยอดขายสูงสุด", "ใหม่ล่าสุด", "แนะนำ"]
+  // };
   const relatedProducts = [
     {
       id: 2,
@@ -190,7 +196,7 @@ const SubcategoryProductDetail = () => {
           <span key={index} className={`px-3 py-1 text-xs font-medium rounded-full ${
             tag === 'ขายดี' ? 'bg-gradient-to-r from-orange-400 to-red-400 text-white' :
             tag === 'แนะนำ' ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white' :
-            tag === 'ส่งฟรี' ? 'bg-gradient-to-r from-blue-400 to-cyan-400 text-white' :
+            tag === 'ใหม่ล่าสุด' ? 'bg-gradient-to-r from-blue-400 to-cyan-400 text-white' :
             'bg-gradient-to-r from-purple-400 to-pink-400 text-white'
           }`}>
             {tag}
@@ -230,7 +236,7 @@ const SubcategoryProductDetail = () => {
       </div> */}
 
       {/* Color Variants */}
-      <div className="mb-8">
+      {/* <div className="mb-8">
         <h3 className="text-lg font-semibold text-slate-800 mb-4">เลือกสี</h3>
         <div className="flex space-x-3">
           {productData.variants.map((variant, index) => (
@@ -258,7 +264,7 @@ const SubcategoryProductDetail = () => {
           สี: {productData.variants[selectedVariant].name}
           {!productData.variants[selectedVariant].inStock && " (สินค้าหมด)"}
         </p>
-      </div>
+      </div> */}
 
       {/* Quantity & Actions */}
       <div className="mb-8">
@@ -279,7 +285,7 @@ const SubcategoryProductDetail = () => {
               +
             </button>
           </div>
-          <span className="text-slate-600">ชิ้น (มีสินค้า 50 ชิ้น)</span>
+          <span className="text-slate-600">ชิ้น ({productData.stock} ชิ้น)</span>
         </div>
 
         {/* Action Buttons */}
@@ -343,7 +349,6 @@ const SubcategoryProductDetail = () => {
       <div className="flex space-x-1 bg-slate-100 rounded-2xl p-1 mb-8">
         {[
           { id: 'description', label: 'รายละเอียด', icon: Info },
-          { id: 'specifications', label: 'ข้อมูลเทคนิค', icon: Grid3x3 },
           { id: 'reviews', label: 'รีวิว', icon: MessageCircle }
         ].map((tab) => (
           <button
@@ -368,19 +373,19 @@ const SubcategoryProductDetail = () => {
             <h3 className="text-2xl font-bold text-slate-800 mb-4">รายละเอียดสินค้า</h3>
             <p className="text-slate-600 leading-relaxed text-lg">{productData.description}</p>
             
-            <h4 className="text-xl font-semibold text-slate-800 mt-8 mb-4">จุดเด่นของสินค้า</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* <h4 className="text-xl font-semibold text-slate-800 mt-8 mb-4">จุดเด่นของสินค้า</h4> */}
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {productData.features.map((feature, index) => (
                 <div key={index} className="flex items-start space-x-3">
                   <CheckCircle className="text-green-500 mt-1 flex-shrink-0" size={20} />
                   <p className="text-slate-600">{feature}</p>
                 </div>
               ))}
-            </div>
+            </div> */}
           </div>
         )}
 
-        {activeTab === 'specifications' && (
+        {/* {activeTab === 'specifications' && (
           <div>
             <h3 className="text-2xl font-bold text-slate-800 mb-6">ข้อมูลเทคนิค</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -392,7 +397,7 @@ const SubcategoryProductDetail = () => {
               ))}
             </div>
           </div>
-        )}
+        )} */}
 
         {activeTab === 'reviews' && (
           <div>
@@ -473,6 +478,16 @@ const SubcategoryProductDetail = () => {
       </div>
     </div>
   );
+   if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังโหลดสินค้า...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50">

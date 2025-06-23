@@ -11,7 +11,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import Sort from './Sort.jsx'
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import ProductsDetail from './ProductsDetail';
 const ProductListingPage = () => {
   const [products, setProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -22,7 +23,7 @@ const ProductListingPage = () => {
   const [loading, setLoading] = useState(true);
       const { subcategoryId } = useParams(); // ✅ ดึงค่าจาก URL
   const productsPerPage = 12;
-
+ const navigate = useNavigate();
   // Mock data - ในการใช้งานจริงจะ fetch จาก API
    useEffect(() => {
     fetch(`http://localhost:5000/api/store/subcategoryP/${subcategoryId}`)
@@ -80,10 +81,10 @@ const ProductListingPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleViewDetails = (product) => {
-    console.log('View details for:', product);
+  const handleViewDetails = (productId) => {
+    console.log(productId)
     // Here you would typically navigate to product details page
-    alert(`ดูรายละเอียดสินค้า: ${product.name}`);
+    navigate(`/detailProducts/${productId}`)
   };
 
   const ProductCard = ({ product }) => {
@@ -110,7 +111,7 @@ const ProductListingPage = () => {
           {/* View Details Button */}
           <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <button 
-              onClick={() => handleViewDetails(product)}
+              onClick={() => handleViewDetails(product.id)}
               className="p-2 bg-white/90 backdrop-blur-md rounded-full hover:bg-blue-100 transition-colors"
               title="ดูรายละเอียด"
             >
@@ -132,7 +133,7 @@ const ProductListingPage = () => {
 
           <div className="flex justify-center">
             <button 
-              onClick={() => handleViewDetails(product)}
+              onClick={() => handleViewDetails(product.id)}
               className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-semibold rounded-full hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
             >
               <Eye size={14} />

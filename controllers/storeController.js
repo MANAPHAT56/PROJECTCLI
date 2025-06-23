@@ -176,9 +176,85 @@ exports.getProductsInSCategory = async (req, res) => {
   }
 };
 exports.getProductDetail = async(req,res)=>{
-     const productid = req.params.ProductId;
-     const DataProduct = await db.query(
-      
-     )
+     const productId = req.params.productId;
 
+  try {
+    // 1. ดึงข้อมูลสินค้า + category/subcategory + images
+    const [rows] = await db.query(`
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.created_at,
+        p.monthly_purchases,
+        p.total_purchases,
+        p.total_purchases AS sold,
+        c.name AS category,
+        s.name AS subcategory,
+        pi.image_path
+      FROM Products p
+      JOIN Categories c ON p.category_id = c.id
+      JOIN subcategories s ON p.subcategory_id = s.id
+      LEFT JOIN product_images pi ON p.id = pi.product_id
+      WHERE p.id = ?
+    `, [productId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const row = rows[0];
+
+    // 2. ดึงยอดขายสูงสุดในระบบ
+    const [[maxPurchases]] = await db.query(`
+      SELECT 
+        MAX(monthly_purchases) AS max_monthly,
+        MAX(total_purchases) AS max_total
+      FROM Products
+    `);
+
+    // 3. ตรวจสอบเงื่อนไข tag
+    const tags = ["แนะนำ"];
+
+    const createdAt = new Date(row.created_at);
+    const now = new Date();
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(now.getDate() - 7);
+
+    if (createdAt >= oneWeekAgo) {
+      tags.push("ใหม่ล่าสุด");
+    }
+
+    if (row.monthly_purchases === maxPurchases.max_monthly) {
+      tags.push("ขายดี");
+    }
+
+    if (row.total_purchases === maxPurchases.max_total) {
+      tags.push("ยอดขายสูงสุด");
+    }
+
+    // 4. สร้าง object หลัก
+    const productData = {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      sold: row.sold,
+      category: row.category,
+      subcategory: row.subcategory,
+      images: [],
+      tags // <-- ใส่ tags เข้าไปตรงนี้
+    };
+
+    // รวมรูปภาพทั้งหมด
+    for (const r of rows) {
+      if (r.image_path) {
+        productData.images.push(r.image_path);
+      }
+    }
+
+    res.json(productData);
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 }
