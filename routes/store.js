@@ -11,5 +11,5 @@ router.get('/preview/:categoryId', storeController.getCategoryPreview);
 
 // GET /store/category/:categoryId => สินค้าทั้งหมดในหมวดหมู่
 router.get('/category/:categoryId', storeController.getCategoryProducts);
-
+router.get('/subcategoryP/:subcategoryId', storeController.getProductsInSCategory);
 module.exports = router;

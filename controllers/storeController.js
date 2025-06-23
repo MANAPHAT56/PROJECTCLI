@@ -20,52 +20,36 @@ const db = require('../db'); // สมมุติว่ามีโมดูล
 //   { id: 8, name: 'ถุงผ้า', image: '/products/bag.jpg', categoryId: 3 }
 // ];
 exports.getCategoriesWithProducts = async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT 
-        c.id AS categoryId,
-        c.name AS categoryName,
-        c.icon,
-        c.gradient,
-        p.id AS productId,
-        p.name AS productName,
-        p.price,
-        p.image_Main_path AS image
-      FROM Categories c
-      LEFT JOIN Products p ON p.category_id = c.id
+    try {
+    // 1. ดึงหมวดหมู่ทั้งหมดก่อน
+    const [categories] = await db.query(`
+      SELECT id, name, icon, gradient FROM Categories
     `);
 
-    console.log('rows:', rows); // สำหรับ debug
+    // 2. ดึงสินค้าแบบสุ่ม 8 ชิ้น ต่อหมวด
+    const result = [];
 
-    const categoriesMap = {};
+    for (const cat of categories) {
+      const [products] = await db.query(`
+        SELECT id, name, price, image_Main_path AS image
+        FROM Products
+        WHERE category_id = ?
+        ORDER BY RAND()
+        LIMIT 8
+      `, [cat.id]);
 
-    rows.forEach(row => {
-      if (!categoriesMap[row.categoryId]) {
-        categoriesMap[row.categoryId] = {
-          id: row.categoryId,
-          name: row.categoryName,
-          icon: row.icon,
-          gradient: row.gradient,
-          products: []
-        };
-      }
+      result.push({
+        id: cat.id,
+        name: cat.name,
+        icon: cat.icon,
+        gradient: cat.gradient,
+        products
+      });
+    }
 
-      if (row.productId && categoriesMap[row.categoryId].products.length < 8) {
-        console.log('Adding product:', row.productName);
-        categoriesMap[row.categoryId].products.push({
-          id: row.productId,
-          name: row.productName,
-          price: row.price,
-          image: row.image,
-        });
-      }
-    });
-
-    const categories = Object.values(categoriesMap);
-    res.json(categories);
-
+    res.json(result);
   } catch (err) {
-    console.error('❌ Error fetching categories with products:', err);
+    console.error('❌ Error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -146,5 +130,55 @@ exports.getSubCategorieswithProducts = async (req, res) => {
     console.error('Error fetching subcategories:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
+  
 };
+exports.getProductsInSCategory = async (req, res) => {
+  const subcategoryId = req.params.subcategoryId;
 
+  try {
+    const [rows] = await db.query(
+      `
+      SELECT 
+        p.id,
+        p.name,
+        p.image_Main_path AS image,
+        p.created_at,
+        p.monthly_purchases,
+        p.total_purchases,
+        c.name AS category_name
+      FROM Products p
+      JOIN Categories c ON p.category_id = c.id
+      WHERE p.subcategory_id = ?
+      `,
+      [subcategoryId]
+    );
+
+    const now = new Date();
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(now.getDate() - 7);
+
+    const result = rows.map(product => {
+      return {
+        id: product.id,
+        name: product.name,
+        image: product.image,
+        isNew: new Date(product.created_at) >= oneWeekAgo,
+        category: product.category_name,
+        monthlyPurchases: product.monthly_purchases,
+        totalPurchases: product.total_purchases
+      };
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+exports.getProductDetail = async(req,res)=>{
+     const productid = req.params.ProductId;
+     const DataProduct = await db.query(
+      
+     )
+
+}

@@ -54,7 +54,7 @@ const App = () => {
           }
         />
         <Route
-          path="/ProductinCategory"
+          path="/P_insubcategory/:subcategoryId"
           element={
             <>
               <Productinsubcategory />

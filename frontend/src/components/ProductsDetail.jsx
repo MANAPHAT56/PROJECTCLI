@@ -22,7 +22,7 @@ import {
 
 const SubcategoryProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  // const [isFavorite, setIsFavorite] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [animatedElements, setAnimatedElements] = useState(new Set());
@@ -34,11 +34,6 @@ const SubcategoryProductDetail = () => {
     name: "โซฟาผ้า 3 ที่นั่ง Premium Comfort",
     subcategory: "โซฟาและเก้าอี้",
     category: "เฟอร์นิเจอร์ห้องนั่งเล่น",
-    price: "฿24,900",
-    originalPrice: "฿32,900",
-    discount: "24%",
-    rating: 4.8,
-    reviews: 247,
     sold: 1250,
     description: "โซฟาผ้าคุณภาพพรีเมียม ออกแบบเพื่อความสะดวกสบายสูงสุด ผลิตจากผ้าคุณภาพดีนำเข้าจากยุโรป มีโครงสร้างไม้แข็งแรง ฟองน้ำหนาพิเศษ เหมาะสำหรับการนั่งเล่นและพักผ่อนในบ้าน",
     features: [
@@ -145,9 +140,9 @@ const SubcategoryProductDetail = () => {
         </div>
 
         {/* Discount Badge */}
-        <div className="absolute top-4 left-4 px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-full font-bold shadow-lg">
+        {/* <div className="absolute top-4 left-4 px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-full font-bold shadow-lg">
           -{productData.discount}
-        </div>
+        </div> */}
       </div>
 
       {/* Thumbnail Images */}
@@ -211,21 +206,20 @@ const SubcategoryProductDetail = () => {
       {/* Rating & Reviews */}
       <div className="flex items-center space-x-4 mb-6">
         <div className="flex items-center space-x-1">
-          {[...Array(5)].map((_, i) => (
+          {/* {[...Array(5)].map((_, i) => (
             <Star 
               key={i} 
               size={20} 
               className={i < Math.floor(productData.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'} 
             />
-          ))}
+          ))} */}
           <span className="font-bold text-slate-700 ml-2">{productData.rating}</span>
         </div>
-        <span className="text-slate-500">({productData.reviews} รีวิว)</span>
         <span className="text-slate-500">• ขายแล้ว {productData.sold} ชิ้น</span>
       </div>
 
       {/* Price */}
-      <div className="mb-8">
+      {/* <div className="mb-8">
         <div className="flex items-center space-x-4 mb-2">
           <span className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
             {productData.price}
@@ -233,7 +227,7 @@ const SubcategoryProductDetail = () => {
           <span className="text-xl text-slate-400 line-through">{productData.originalPrice}</span>
         </div>
         <p className="text-slate-600">รวม VAT แล้ว ไม่รวมค่าจัดส่ง</p>
-      </div>
+      </div> */}
 
       {/* Color Variants */}
       <div className="mb-8">
@@ -292,9 +286,9 @@ const SubcategoryProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <button className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold rounded-2xl hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
             <ShoppingCart className="inline mr-2" size={20} />
-            เพิ่มลงตะกร้า
+            สั่งซื้อ
           </button>
-          <button 
+          {/* <button 
             onClick={() => setIsFavorite(!isFavorite)}
             className={`w-full py-4 font-bold rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
               isFavorite 
@@ -304,7 +298,7 @@ const SubcategoryProductDetail = () => {
           >
             <Heart className="inline mr-2" size={20} fill={isFavorite ? 'currentColor' : 'none'} />
             {isFavorite ? 'ลบออกจากรายการโปรด' : 'เพิ่มในรายการโปรด'}
-          </button>
+          </button> */}
         </div>
       </div>
 

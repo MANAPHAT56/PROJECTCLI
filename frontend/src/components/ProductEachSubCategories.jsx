@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ShoppingCart, Heart, Star, Eye, Plus, Filter, Grid, List, Search } from 'lucide-react';
 import { useParams } from 'react-router-dom';
-
+import { useNavigate } from 'react-router-dom';
 const SubcategoryShowcase = () => {
+    const navigate = useNavigate();
       const { categoryId } = useParams(); // ✅ ดึงค่าจาก URL
   const [visibleProducts, setVisibleProducts] = useState({});
   const [favorites, setFavorites] = useState(new Set());
@@ -10,6 +11,12 @@ const SubcategoryShowcase = () => {
   const [subcategories, setSubcategories] = useState([]);
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
+    const navigateToInCategory = (subcategoryId) => {
+    // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
+    // ในระบบจริงจะเป็นแบบนี้:
+    navigate(`/P_insubcategory/${subcategoryId}`);
+    // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
+  };
  useEffect(() => {
   fetch(`http://localhost:5000/api/store/subcategories/${categoryId}`)
     .then(res => res.json())
@@ -295,7 +302,7 @@ const SubcategoryShowcase = () => {
 
               {/* View All Button */}
               <button
-                onClick={() => console.log(`View all ${subcategory.name}`)}
+                onClick={() => navigateToInCategory(subcategory.id)}
                 className="group inline-flex items-center px-8 py-4 bg-gradient-to-r from-slate-600 to-slate-700
                   text-white font-semibold rounded-full hover:from-slate-500 hover:to-slate-600 
                   transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
