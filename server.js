@@ -6,6 +6,7 @@ const worksRouter = require('./routes/work');
 const contactRouter = require('./routes/contact');
 const articlesRouter = require('./routes/articles');
 const newsRouter = require('./routes/news');
+const Admin = require('./routes/admin');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 app.use(cors({
@@ -20,6 +21,7 @@ app.use('/api/works', worksRouter); // Base path
 app.use('/api/contact', contactRouter); // Base path
 app.use('/api/articles', articlesRouter); // Base path
 app.use('/api/news', newsRouter); // Base path
+app.use('/api/admin', Admin); // Base path
 app.set('trust proxy', true);
 //หน้าขั้นตอนการสั่งซื้อ
 //หน้าโชว์รูม

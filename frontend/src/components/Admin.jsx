@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
   Plus,
   Search,
@@ -39,6 +40,8 @@ const AdminDashboard = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [gridView, setGridView] = useState(true);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [pagination, setPagination] = useState({});
+  const limit = 12;
 
   // Form states
   const [formData, setFormData] = useState({
@@ -52,72 +55,39 @@ const AdminDashboard = () => {
     image_Sub_path: ''
   });
 
-  const itemsPerPage = 12;
+
 
   // Mock data
-  const mockCategories = [
-    { id: 1, name: 'อิเล็กทรอนิกส์', icon: 'Monitor', gradient: 'from-blue-600 to-purple-600', image_path: '/images/electronics.jpg' },
-    { id: 2, name: 'แฟชั่น', icon: 'Shirt', gradient: 'from-pink-600 to-rose-600', image_path: '/images/fashion.jpg' },
-    { id: 3, name: 'บ้านและสวน', icon: 'Home', gradient: 'from-green-600 to-emerald-600', image_path: '/images/home.jpg' },
-    { id: 4, name: 'กีฬาและออกกำลังกาย', icon: 'Dumbbell', gradient: 'from-orange-600 to-red-600', image_path: '/images/sports.jpg' },
-    { id: 5, name: 'หนังสือ', icon: 'Book', gradient: 'from-indigo-600 to-blue-600', image_path: '/images/books.jpg' }
-  ];
 
-  const mockSubcategories = [
-    { id: 1, name: 'สมาร์ทโฟน', category_id: 1, icon: 'Smartphone', gradient: 'from-blue-500 to-cyan-500' },
-    { id: 2, name: 'แล็ปท็อป', category_id: 1, icon: 'Laptop', gradient: 'from-purple-500 to-blue-500' },
-    { id: 3, name: 'เสื้อผ้าผู้ชาย', category_id: 2, icon: 'Shirt', gradient: 'from-green-500 to-blue-500' },
-    { id: 4, name: 'เสื้อผ้าผู้หญิง', category_id: 2, icon: 'Dress', gradient: 'from-pink-500 to-purple-500' }
-  ];
-
-  const mockProducts = [
-    { 
-      id: 1, 
-      name: 'iPhone 15 Pro Max 256GB', 
-      price: 45900, 
-      description: 'สมาร์ทโฟนรุ่นใหม่ล่าสุด',
-      image_Main_path: '/images/iphone15.jpg',
-      image_Sub_path: '/images/iphone15-2.jpg',
-      category_id: 1,
-      subcategory_id: 1,
-      stock: 50,
-      total_purchases: 150,
-      monthly_purchases: 25,
-      created_at: '2024-01-15'
-    },
-    { 
-      id: 2, 
-      name: 'MacBook Air M2 13" 256GB', 
-      price: 39900, 
-      description: 'แล็ปท็อปสำหรับการทำงาน',
-      image_Main_path: '/images/macbook.jpg',
-      image_Sub_path: '/images/macbook-2.jpg',
-      category_id: 1,
-      subcategory_id: 2,
-      stock: 30,
-      total_purchases: 89,
-      monthly_purchases: 12,
-      created_at: '2024-01-10'
-    }
-  ];
-
+ useEffect(() => {
+    axios.get(`http://localhost:5000/api/admin/products?page=${currentPage}&limit=${limit}`).then((res) => {
+      setProducts(res.data.data);
+      setPagination(res.data.pagination);
+    });
+  }, [currentPage]);
   useEffect(() => {
-    setProducts(mockProducts);
-    setCategories(mockCategories);
-    setSubcategories(mockSubcategories);
+    axios.get(`http://localhost:5000/api/admin/Categories`).then((res) => {
+     setCategories(res.data.categories);
+     console.log("Cres"+res.data.categories)
+    });
   }, []);
+    useEffect(() => {
+    axios.get(`http://localhost:5000/api/admin/subcategories`).then((res) => {
+      setSubcategories(res.data.subcategories);
+      console.log("SubCa"+res.data.subcategories)
+    });
+  }, []);
+//   const filteredProducts = products.filter(product => {
+//     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+//     const matchesCategory = selectedCategory === 'all' || product.category_id === parseInt(selectedCategory);
+//     return matchesSearch && matchesCategory;
+//   });
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category_id === parseInt(selectedCategory);
-    return matchesSearch && matchesCategory;
-  });
-
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const currentProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+//   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+//   const currentProducts = filteredProducts.slice(
+//     (currentPage - 1) * itemsPerPage,
+//     currentPage * itemsPerPage
+//   );
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('th-TH').format(price);
@@ -417,6 +387,7 @@ const AdminDashboard = () => {
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
+                  
                 </option>
               ))}
             </select>
@@ -442,11 +413,12 @@ const AdminDashboard = () => {
       {/* Products Grid/List */}
       {gridView ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {currentProducts.map((product) => (
+          {products.map((product) => (
             <div key={product.id} className="bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-700 hover:border-blue-500/50 transition-all group">
               <div className="relative">
                 <div className="w-full h-48 bg-gray-800 flex items-center justify-center">
-                  <ImageIcon size={32} className="text-gray-600" />
+                  {/* <ImageIcon size={32} className="text-gray-600" /> */}
+                  <img src={product.image_Main_path} alt="" />
                 </div>
                 
                 <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -497,7 +469,7 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {currentProducts.map((product) => (
+                {products.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-800/30">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -547,10 +519,10 @@ const AdminDashboard = () => {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {pagination.total > 1 && (
         <div className="flex items-center justify-center gap-2 mt-8">
           <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+           onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
             disabled={currentPage === 1}
             className="flex items-center px-3 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -558,12 +530,12 @@ const AdminDashboard = () => {
             ก่อนหน้า
           </button>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          {Array.from({ length: pagination.page }, (_, i) => i + 1).map((page) => (
             <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
+              key={pagination.page}
+              onClick={() => setCurrentPage(pagination.page)}
               className={`px-3 py-2 text-sm rounded-lg ${
-                currentPage === page
+                currentPage === pagination.page
                   ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
                   : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
               }`}
@@ -573,8 +545,8 @@ const AdminDashboard = () => {
           ))}
 
           <button
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
+           onClick={() => setCurrentPage(p => Math.min(p + 1, pagination.total))}
+            disabled={currentPage === pagination.page}
             className="flex items-center px-3 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ถัดไป
@@ -801,6 +773,7 @@ const AdminDashboard = () => {
                     <Upload size={16} />
                   </button>
                 </div>
+
               </div>
             </>
           );
