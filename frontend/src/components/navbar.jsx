@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Menu, X, Home, Package, ShoppingCart, Building, Award, Users, Phone, FileText, Calendar } from 'lucide-react';
+import { ChevronDown, ChevronRight, Menu, X, Home, Package, ShoppingCart, Award, Users, FileText, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
   // ใช้สำหรับการนำทาง
 const ModernNavbar = () => {
@@ -17,40 +17,44 @@ const ModernNavbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navigationItems = [
+  const useNavigationItems = () => {
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/api/store/CategoryNav') // URL นี้ให้เปลี่ยนตาม API ของคุณ
+      .then((res) => res.json())
+      .then((data) => setCategories(data))
+      .catch((err) => console.error('Error fetching categories:', err));
+  }, []);
+  const navigationItem = [
     { name: 'หน้าแรก', to: '/', icon: Home },
     {
       name: 'สินค้า',
       to: '#',
       icon: Package,
       dropdown: [
-        { name: 'สินค้าทั้งหมด', to: '/categories-with-products' },
-        { name: 'สินค้าใหม่', to: '#' },
-        { name: 'สินค้าลดราคา', to: '#' },
-        { name: 'สินค้าขายดี', to: '#' },
+        { name: 'สินค้าธรรมดา', to: '/categories-with-products' },
+        { name: 'สินค้าพรีเมี่ยม', to: '/newProductsall' },
         {
           name: 'หมวดหมู่สินค้า',
           to: '#',
           hasNested: true,
-          nested: [
-            { name: 'เฟอร์นิเจอร์ห้องนั่งเล่น', to: '/category/living-room' },
-            { name: 'เฟอร์นิเจอร์ห้องนอน', to: '/category/bedroom' },
-            { name: 'เฟอร์นิเจอร์ห้องครัว', to: '/category/kitchen' },
-            { name: 'เฟอร์นิเจอร์ห้องทำงาน', to: '/category/office' },
-            { name: 'เฟอร์นิเจอร์สวน', to: '/category/garden' },
-            { name: 'ของตกแต่งบ้าน', to: '/category/decoration' }
-          ]
+          nested: categories.map((cat) => ({
+            name: cat.name,
+            to: `/category/${cat.id}`
+          }))
         }
       ]
     },
-    { name: 'ขั้นตอนการสั่งซื้อ', to: '#', icon: ShoppingCart },
-    { name: 'โชว์รูม', to: '#', icon: Building },
-    { name: 'ผลงาน', to: '#', icon: Award },
+    { name: 'ขั้นตอนการสั่งซื้อ', to: '/HowtoBuy', icon: ShoppingCart },
     { name: 'เกี่ยวกับเรา', to: '/Aboutus', icon: Users },
-    { name: 'ติดต่อเรา', to: '#', icon: Phone },
-    { name: 'บทความ', to: '#', icon: FileText },
-    { name: 'ข่าวสารกิจกรรม', to: '#', icon: Calendar }
+        { name: 'โปรไฟล์', to: '#', icon: Award },
+    { name: 'Login', to: '#', icon: FileText },
+    { name: 'Logout', to: '#', icon: Calendar }
   ];
+   return navigationItem;
+};
+const navigationItems=useNavigationItems();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);

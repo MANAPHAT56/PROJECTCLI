@@ -16,4 +16,6 @@ router.get('/product/:productId',storeController.getProductDetail);
 router.get('/newproductsHome',storeController.getNewProducts);
 router.get('/topsellerHome',storeController.getTopseller);
 router.get('/RealatedPdeatail/:productId',storeController.getRelatedP_detail);
+router.get('/CategoryNav',storeController.getCategoriesName);
+router.get('/Categorieshome',storeController.getCatagoriesHome);
 module.exports = router;

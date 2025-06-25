@@ -1,0 +1,12 @@
+CREATE TABLE User_Activity_Scores (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  activity_id INT NOT NULL,
+  score INT DEFAULT 0,
+  rank INT,          -- อันดับ (เช่น Top 10)
+  reward_claimed BOOLEAN DEFAULT FALSE,  -- รับของรางวัลหรือยัง
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES Users(id),
+  FOREIGN KEY (activity_id) REFERENCES Activities(id),
+  UNIQUE KEY (user_id, activity_id)
+);

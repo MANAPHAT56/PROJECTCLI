@@ -7,11 +7,9 @@ import ProductEachSubCategories from './components/ProductEachSubCategories';
 import ProductsDetail from './components/ProductsDetail';
 import Productinsubcategory from './components/Productinsubcategory';
 import Aboutus from './components/Aboutus';
-// import Home from './pages/Home';
-// import ProductsAll from './pages/ProductsAll';
-// import ProductsRecommended from './pages/ProductsRecommended';
-// ... import หน้าอื่นๆ
-
+import HowtoBuy from './components/HowtoBuy';
+import NewProductsall from './components/newproductsAll';
+import Login from './components/Login';
 const App = () => {
   return (
     <Router>
@@ -68,11 +66,30 @@ const App = () => {
           element={
             <>
               <Aboutus />
+              
             </>
             
           }
         />
-        {/* Route อื่นๆ */}
+          <Route
+          path="/HowtoBuy"
+          element={
+            <>
+              <HowtoBuy />
+            </>
+            
+          }
+        />
+         <Route
+          path="/newProductsall"
+          element={
+            <>
+              <NewProductsall />
+            </>
+            
+          }
+        />
+          <Route path="/Login" element={<><Login /></>}/>
         {/* 
         <Route path="/products/all" element={<ProductsAll />} />
         <Route path="/products/recommended" element={<ProductsRecommended />} />

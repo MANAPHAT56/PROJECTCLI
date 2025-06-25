@@ -8,25 +8,29 @@ const ContactSection = () => {
       icon: <MessageCircle size={20} />,
       title: "Line",
       subtitle: "@yourshop",
-      action: "เพิ่มเพื่อน"
+      action: "เพิ่มเพื่อน",
+      links:"https://line.me/ti/p/b3mjc54sSb"
     },
     {
       icon: <MessageCircle size={20} />,
       title: "Messenger", 
       subtitle: "m.me/yourshop",
-      action: "ส่งข้อความ"
+      action: "ส่งข้อความ",
+      links:"https://m.me/manaphat97"
     },
     {
       icon: <Phone size={20} />,
       title: "โทรศัพท์",
-      subtitle: "02-123-4567",
-      action: "โทรเลย"
+      subtitle: "097-260-2016",
+      action: "โทรเลย",
+      links:"#"
     },
     {
       icon: <Mail size={20} />,
       title: "อีเมล",
-      subtitle: "info@yourshop.com", 
-      action: "ส่งเมล"
+      subtitle: "ttpho5874@gmail.com", 
+      action: "ส่งเมล",
+      links:"#"
     }
   ];
   return (
@@ -42,26 +46,28 @@ const ContactSection = () => {
         {/* Mobile: 2 columns, Desktop: 4 columns */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8">
           {contactMethods.map((method, index) => (
-            <div
-              key={index}
-              className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-8 text-center cursor-pointer transition-all duration-500 hover:transform hover:-translate-y-2 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25 hover:border-blue-500/30 hover:bg-blue-500/10 group relative overflow-hidden"
-            >
-              {/* Shimmer Effect */}
-              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-              
-              {/* Icon - smaller on mobile */}
-              <div className="w-12 h-12 md:w-20 md:h-20 mx-auto mb-3 md:mb-6 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg shadow-blue-500/30">
-                {method.icon}
-              </div>
-              
-              {/* Content - smaller text on mobile */}
-              <h3 className="text-sm md:text-xl font-bold text-white mb-1 md:mb-2">{method.title}</h3>
-              <p className="text-slate-300 mb-3 md:mb-6 text-xs md:text-base">{method.subtitle}</p>
-              <div className="text-yellow-400 text-xs md:text-sm font-semibold flex items-center justify-center gap-1 md:gap-2 transition-all duration-300 group-hover:text-blue-300 group-hover:translate-x-1">
-                <span>{method.action}</span>
-                <ChevronRight size={12} className="md:w-4 md:h-4" />
-              </div>
-            </div>
+          <a
+  key={index}
+  href={method.links}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-8 text-center cursor-pointer transition-all duration-500 hover:transform hover:-translate-y-2 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25 hover:border-blue-500/30 hover:bg-blue-500/10 group relative overflow-hidden no-underline block"
+>
+  {/* Shimmer */}
+  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+  {/* Icon */}
+  <div className="w-12 h-12 md:w-20 md:h-20 mx-auto mb-3 md:mb-6 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg shadow-blue-500/30">
+    {method.icon}
+  </div>
+
+  <h3 className="text-sm md:text-xl font-bold text-white mb-1 md:mb-2">{method.title}</h3>
+  <p className="text-slate-300 mb-3 md:mb-6 text-xs md:text-base">{method.subtitle}</p>
+  <div className="text-yellow-400 text-xs md:text-sm font-semibold flex items-center justify-center gap-1 md:gap-2 transition-all duration-300 group-hover:text-blue-300 group-hover:translate-x-1">
+    <span>{method.action}</span>
+    <ChevronRight size={12} className="md:w-4 md:h-4" />
+  </div>
+</a>
           ))}
         </div>
       </div>
@@ -237,19 +243,19 @@ const navigateToProduct = (productId) =>{
 
 // Product Categories Section Component
 const ProductCategoriesSection = () => {
-  const categories = [
-    { name: "มือถือ & แท็บเล็ต", icon: "📱", count: "245+" },
-    { name: "คอมพิวเตอร์", icon: "💻", count: "189+" },
-    { name: "อุปกรณ์เสียง", icon: "🎧", count: "156+" },
-    { name: "กล้องถ่ายรูป", icon: "📷", count: "98+" },
-    { name: "นาฬิกาอัจฉริยะ", icon: "⌚", count: "67+" },
-    { name: "เครื่องใช้ไฟฟ้า", icon: "🔌", count: "234+" },
-    { name: "เกมและของเล่น", icon: "🎮", count: "123+" },
-    { name: "อุปกรณ์ฟิตเนส", icon: "💪", count: "87+" },
-    { name: "รถยนต์ & จักรยาน", icon: "🚗", count: "76+" },
-    { name: "แฟชั่น & เครื่องประดับ", icon: "👗", count: "345+" }
-  ];
-
+  const [categories,setCategories] = useState([]);
+  const navigate = useNavigate();
+  const navigateTocategory  = (categoryId) =>{
+     navigate(`/category/${categoryId}`);
+  }
+  useEffect(() => {
+     window.scrollTo({ top: 0, behavior: 'smooth' });
+   fetch(`http://localhost:5000/api/store/Categorieshome`)
+     .then(res => res.json())
+     .then(data => setCategories(data))
+     .catch(err => console.error('Error fetching categories:', err));
+ }, []);
+ 
   return (
   <div className="bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-700 py-12 md:py-16 px-4 relative overflow-hidden">
 
@@ -262,12 +268,14 @@ const ProductCategoriesSection = () => {
         </h2>
         
         {/* Mobile: 3 columns, Desktop: 5 columns */}
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-6">
+       
+        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-6" >
           {categories.map((category, index) => (
             <div
+               onClick={() => navigateTocategory(category.id)} 
               key={index}
               className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-lg md:rounded-2xl p-3 md:p-8 text-center cursor-pointer transition-all duration-500 hover:transform hover:-translate-y-2 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25 hover:bg-blue-500/10 hover:border-blue-500/30 group relative overflow-hidden"
-            >
+            > 
               {/* Icon - smaller on mobile */}
               <div className="text-2xl md:text-6xl mb-2 md:mb-4 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3">
                 {category.icon}
@@ -285,6 +293,7 @@ const ProductCategoriesSection = () => {
         </div>
       </div>
     </div>
+     
   );
 };
 
@@ -296,7 +305,86 @@ const App = () => {
       <NewProductsSection />
       <TopsellerProductsSection />
       <ProductCategoriesSection />
+       <footer className="bg-gradient-to-r from-slate-800 to-slate-900 text-white py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-cyan-400">เกี่ยวกับเรา</h3>
+              <p className="text-gray-300 leading-relaxed">
+                ผู้เชี่ยวชาญด้านเฟอร์นิเจอร์คุณภาพสูง มุ่งมั่นสร้างสรรค์พื้นที่อยู่อาศัยที่สมบูรณ์แบบ
+              </p>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-cyan-400">หมวดหมู่สินค้า</h3>
+              <div className="space-y-2 text-gray-300">
+                <p className="hover:text-cyan-400 cursor-pointer transition-colors">เฟอร์นิเจอร์ห้องนั่งเล่น</p>
+                <p className="hover:text-cyan-400 cursor-pointer transition-colors">เฟอร์นิเจอร์ห้องนอน</p>
+                <p className="hover:text-cyan-400 cursor-pointer transition-colors">เฟอร์นิเจอร์ห้องครัว</p>
+                <p className="hover:text-cyan-400 cursor-pointer transition-colors">เฟอร์นิเจอร์สำนักงาน</p>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-cyan-400">บริการลูกค้า</h3>
+              <div className="space-y-2 text-gray-300">
+                <p className="flex items-center">
+                  <span className="mr-2">📞</span> 02-xxx-xxxx
+                </p>
+                <p className="flex items-center">
+                  <span className="mr-2">📧</span> support@furniture.com
+                </p>
+                <p className="flex items-center">
+                  <span className="mr-2">🕒</span> จันทร์-เสาร์ 09:00-18:00
+                </p>
+                <p className="flex items-center">
+                  <span className="mr-2">💬</span> แชทสด 24/7
+                </p>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-cyan-400">ติดตามเรา</h3>
+              <div className="flex space-x-4 mb-4">
+                <button className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full flex items-center justify-center hover:from-blue-500 hover:to-blue-600 transition-all duration-300 transform hover:scale-110">
+                  <span className="text-white font-bold">f</span>
+                </button>
+                <button className="w-12 h-12 bg-gradient-to-r from-pink-600 to-rose-600 rounded-full flex items-center justify-center hover:from-pink-500 hover:to-rose-500 transition-all duration-300 transform hover:scale-110">
+                  <span className="text-white font-bold">ig</span>
+                </button>
+                <button className="w-12 h-12 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center hover:from-green-500 hover:to-emerald-500 transition-all duration-300 transform hover:scale-110">
+                  <span className="text-white font-bold">L</span>
+                </button>
+                <button className="w-12 h-12 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-full flex items-center justify-center hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 transform hover:scale-110">
+                  <span className="text-white font-bold">X</span>
+                </button>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  {/* <Zap className="text-cyan-400" size={16} /> */}
+                  <span className="text-gray-300 text-sm">อัพเดทโปรโมชั่นใหม่</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {/* <Award className="text-cyan-400" size={16} /> */}
+                  <span className="text-gray-300 text-sm">รับสิทธิพิเศษก่อนใคร</span>
+                </div>  
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-700 mt-12 pt-8">
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <p className="text-gray-400 mb-4 md:mb-0">
+                © 2025 Modern Furniture Store. สงวนลิขสิทธิ์ทั้งหมด
+              </p>
+              <div className="flex space-x-6 text-gray-400 text-sm">
+                <a href="#" className="hover:text-cyan-400 transition-colors">นโยบายความเป็นส่วนตัว</a>
+                <a href="#" className="hover:text-cyan-400 transition-colors">เงื่อนไขการใช้งาน</a>
+                <a href="#" className="hover:text-cyan-400 transition-colors">นโยบายการคืนสินค้า</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
+    
   );
 };
 

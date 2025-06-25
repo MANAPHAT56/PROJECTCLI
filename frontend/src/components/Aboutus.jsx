@@ -2,6 +2,7 @@ import React from 'react';
 import { Building, Award, Users, Printer, Palette, Globe } from 'lucide-react';
 
 export default function PhothongPrintingWebsite() {
+   window.scrollTo({ top: 0, behavior: 'smooth' });
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 mt-15  ">
       {/* Background decorative elements */}

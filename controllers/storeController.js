@@ -2,23 +2,6 @@
 // const express = require('express');
 // const router = express.Router();
 const db = require('../db'); // สมมุติว่ามีโมดูล db สำหรับเชื่อมต่อฐานข้อมูล
-
-// const categories = [
-//   { id: 1, name: 'ของขวัญ' },
-//   { id: 2, name: 'ของใช้สำนักงาน' },
-//   { id: 3, name: 'ของพรีเมี่ยม' }
-// ];
-
-// const products = [
-//   { id: 1, name: 'แก้วกาแฟ', image: '/products/mug.jpg', categoryId: 1 },
-//   { id: 2, name: 'สมุดโน้ต', image: '/products/notebook.jpg', categoryId: 1 },
-//   { id: 3, name: 'พวงกุญแจ', image: '/products/keychain.jpg', categoryId: 1 },
-//   { id: 4, name: 'ปากกา', image: '/products/pen.jpg', categoryId: 1 },
-//   { id: 5, name: 'กระบอกน้ำ', image: '/products/bottle.jpg', categoryId: 2 },
-//   { id: 6, name: 'USB', image: '/products/usb.jpg', categoryId: 2 },
-//   { id: 7, name: 'แฟลชไดรฟ์', image: '/products/flash.jpg', categoryId: 2 },
-//   { id: 8, name: 'ถุงผ้า', image: '/products/bag.jpg', categoryId: 3 }
-// ];
 exports.getCategoriesWithProducts = async (req, res) => {
     try {
     // 1. ดึงหมวดหมู่ทั้งหมดก่อน
@@ -133,51 +116,182 @@ exports.getSubCategorieswithProducts = async (req, res) => {
   
 };
 exports.getProductsInSCategory = async (req, res) => {
-  const subcategoryId = req.params.subcategoryId;
+// ฟังก์ชันสำหรับดึงรายการสินค้าแบบ infinite scroll
+
+  const { subcategoryId } = req.params;
+  const { 
+    currentPage = 1, 
+    limit = 12, 
+    sort = 'default', 
+    search = '' 
+  } = req.query;
 
   try {
-    const [rows] = await db.query(
-      `
+    const offset = (currentPage - 1) * limit;
+    
+    // Base query
+    let baseQuery = `
       SELECT 
         p.id,
         p.name,
-        p.image_Main_path AS image,
+        p.description,
         p.created_at,
         p.monthly_purchases,
         p.total_purchases,
-        c.name AS category_name
+        CONCAT('฿', FORMAT(p.price, 0)) AS price,
+        p.price AS raw_price,
+        c.name AS category,
+        s.name AS subcategory,
+        p.image_Main_path as image,
+        CASE 
+          WHEN p.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
+          ELSE 0 
+        END AS isNew
       FROM Products p
       JOIN Categories c ON p.category_id = c.id
+      JOIN subcategories s ON p.subcategory_id = s.id
       WHERE p.subcategory_id = ?
-      `,
-      [subcategoryId]
-    );
+    `;
 
-    const now = new Date();
-    const oneWeekAgo = new Date(now);
-    oneWeekAgo.setDate(now.getDate() - 7);
+    let queryParams = [subcategoryId];
 
-    const result = rows.map(product => {
-      return {
-        id: product.id,
-        name: product.name,
-        image: product.image,
-        isNew: new Date(product.created_at) >= oneWeekAgo,
-        category: product.category_name,
-        monthlyPurchases: product.monthly_purchases,
-        totalPurchases: product.total_purchases
-      };
+    // เพิ่มเงื่อนไขการค้นหา
+    if (search && search.trim() !== '') {
+      baseQuery += ` AND p.name LIKE ?`;
+      queryParams.push(`%${search.trim()}%`);
+    }
+
+    // เพิ่มการเรียงลำดับ
+    let orderByClause = '';
+    switch (sort) {
+      case 'newest':
+        orderByClause = 'ORDER BY p.created_at DESC';
+        break;
+      case 'hotseller':
+        orderByClause = 'ORDER BY p.monthly_purchases DESC';
+        break;
+      case 'topseller':
+        orderByClause = 'ORDER BY p.total_purchases DESC';
+        break;
+      case 'price-high':
+        orderByClause = 'ORDER BY p.price DESC';
+        break;
+      case 'price-low':
+        orderByClause = 'ORDER BY p.price ASC';
+        break;
+      default:
+        orderByClause = 'ORDER BY p.id DESC'; // default เรียงตาม id
+    }
+
+    // สร้าง query สำหรับนับจำนวนทั้งหมด
+    let countQuery = `
+      SELECT COUNT(DISTINCT p.id) as total
+      FROM Products p
+      WHERE p.subcategory_id = ?
+    `;
+    let countParams = [subcategoryId];
+
+    if (search && search.trim() !== '') {
+      countQuery += ` AND p.name LIKE ?`;
+      countParams.push(`%${search.trim()}%`);
+    }
+
+    // Execute count query
+    const [[countResult]] = await db.query(countQuery, countParams);
+    const totalItems = countResult.total;
+
+    // สร้าง final query พร้อม pagination
+    const finalQuery = `${baseQuery} ${orderByClause} LIMIT ? OFFSET ?`;
+    queryParams.push(parseInt(limit), parseInt(offset));
+
+    // Execute main query
+    const [rows] = await db.query(finalQuery, queryParams);
+
+    // ดึงยอดขายสูงสุดในระบบสำหรับ tags
+    const [[maxPurchases]] = await db.query(`
+      SELECT 
+        MAX(monthly_purchases) AS max_monthly,
+        MAX(total_purchases) AS max_total
+      FROM Products
+    `);
+
+    // จัดกลุ่มข้อมูลตาม product id
+    const productsMap = new Map();
+
+    for (const row of rows) {
+      if (!productsMap.has(row.id)) {
+        // สร้าง tags
+        const tags = ["แนะนำ"];
+        
+        if (row.isNew) {
+          tags.push("ใหม่ล่าสุด");
+        }
+        
+        if (row.monthly_purchases === maxPurchases.max_monthly) {
+          tags.push("ขายดี");
+        }
+        
+        if (row.total_purchases === maxPurchases.max_total) {
+          tags.push("ยอดขายสูงสุด");
+        }
+
+        productsMap.set(row.id, {
+          id: row.id,
+          name: row.name,
+          price: row.price,
+          description: row.description,
+          category: row.category,
+          subcategory: row.subcategory,
+          monthly_purchases: row.monthly_purchases,
+          total_purchases: row.total_purchases,
+          isNew: row.isNew === 1,
+          tags,
+          image: row.image
+        });
+      }
+
+      // เพิ่มรูปภาพ
+      // if (row.image_path) {
+      //   const product = productsMap.get(row.id);
+      //   if (!product.images.includes(row.image_path)) {
+      //     product.images.push(row.image_path);
+      //   }
+      // }
+    }
+
+    // แปลง Map เป็น Array
+    const products = Array.from(productsMap.values());
+
+    // ถ้าไม่มีรูปภาพ ให้ใส่รูป placeholder
+    // products.forEach(product => {
+    //   if (product.images.length === 0) {
+    //     product.images = [`https://via.placeholder.com/400x300/6366f1/ffffff?text=${encodeURIComponent(product.name)}`];
+    //   }
+    //   // ใช้รูปแรกเป็น image หลัก
+    //   product.image = product.images[0];
+    // });
+
+    res.json({
+      products,
+      pagination: {
+        currentPage: parseInt(currentPage),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        hasMore: (currentPage * limit) < totalItems
+      }
     });
 
-    res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-exports.getProductDetail = async(req,res)=>{
-     const productId = req.params.productId;
 
+// ฟังก์ชันเดิมสำหรับดูรายละเอียดสินค้า (ปรับปรุงเล็กน้อย)
+exports.getProductDetail = async (req, res) => {
+  const productId = req.params.productId;
+  
   try {
     // 1. ดึงข้อมูลสินค้า + category/subcategory + images
     const [rows] = await db.query(`
@@ -188,6 +302,7 @@ exports.getProductDetail = async(req,res)=>{
         p.created_at,
         p.monthly_purchases,
         p.total_purchases,
+        CONCAT('฿', FORMAT(p.price, 0)) AS price,
         p.total_purchases AS sold,
         c.name AS category,
         s.name AS subcategory,
@@ -237,6 +352,106 @@ exports.getProductDetail = async(req,res)=>{
     const productData = {
       id: row.id,
       name: row.name,
+      price: row.price,
+      description: row.description,
+      sold: row.sold,
+      category: row.category,
+      subcategory: row.subcategory,
+      images: [],
+      tags
+    };
+
+    // รวมรูปภาพทั้งหมด
+    for (const r of rows) {
+      if (r.image_path) {
+        productData.images.push(r.image_path);
+      }
+    }
+
+    // ถ้าไม่มีรูปภาพ ให้ใส่รูป placeholder
+    if (productData.images.length === 0) {
+      productData.images = [`https://via.placeholder.com/400x300/6366f1/ffffff?text=${encodeURIComponent(productData.name)}`];
+    }
+
+    res.json(productData);
+    
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Route สำหรับ API (เพิ่มใน routes file)
+/*
+// routes/products.js หรือ routes/store.js
+router.get('/subcategoryP/:subcategoryId', exports.getProductsBySubcategory);
+router.get('/product/:productId', exports.getProductDetail);
+*/
+
+exports.getProductDetail = async(req,res)=>{
+     const productId = req.params.productId;
+
+  try {
+    // 1. ดึงข้อมูลสินค้า + category/subcategory + images
+    const [rows] = await db.query(`
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.created_at,
+        p.monthly_purchases,
+        p.total_purchases,
+        CONCAT('฿', FORMAT(p.price, 0)) AS price,
+        p.total_purchases AS sold,
+        c.name AS category,
+        s.name AS subcategory,
+        pi.image_path
+      FROM Products p
+      JOIN Categories c ON p.category_id = c.id
+      JOIN subcategories s ON p.subcategory_id = s.id
+      LEFT JOIN product_images pi ON p.id = pi.product_id
+      WHERE p.id = ?
+    `, [productId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const row = rows[0];
+
+    // 2. ดึงยอดขายสูงสุดในระบบ
+    const [[maxPurchases]] = await db.query(`
+      SELECT 
+        MAX(monthly_purchases) AS max_monthly,
+        MAX(total_purchases) AS max_total
+      FROM Products
+    `);
+
+    // 3. ตรวจสอบเงื่อนไข tag
+    const tags = ["แนะนำ"];
+
+    const createdAt = new Date(row.created_at);
+    const now = new Date();
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(now.getDate() - 7);
+
+    if (createdAt >= oneWeekAgo) {
+      tags.push("ใหม่ล่าสุด");
+    }
+
+    if (row.monthly_purchases === maxPurchases.max_monthly) {
+      tags.push("ขายดี");
+    }
+
+    if (row.total_purchases === maxPurchases.max_total) {
+      tags.push("ยอดขายสูงสุด");
+    }
+
+    // 4. สร้าง object หลัก
+    const productData = {
+      id: row.id,
+      name: row.name,
+      price : row.price,
       description: row.description,
       sold: row.sold,
       category: row.category,
@@ -330,4 +545,53 @@ const [related] = await db.query(`
 `, [productId, productId]);
 
 res.json(related);
+}
+exports.getCategoriesName = async(req,res)=>{
+     const [rows] = await db.query('SELECT id, name FROM Categories');
+  res.json(rows);
+}
+exports.getNewProductsAll = async(req,res)=>{
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const categoryId = req.query.category;
+
+  const offset = (page - 1) * limit;
+
+  let query = `
+    SELECT id, name, 
+           CONCAT('฿', FORMAT(price, 0)) AS price, 
+           image_Main_path AS image
+    FROM Products
+    ${categoryId ? 'WHERE category_id = ?' : ''}
+    ORDER BY created_at DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  try {
+    const [rows] = await db.query(query, categoryId ? [categoryId, limit, offset] : [limit, offset]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error', error: err });
+  }
+}
+exports.getCatagoriesHome = async(req,res)=>{
+  const [rows] = await db.query(`
+  SELECT 
+  c.id AS id,
+    c.name AS name,
+    c.icon AS icon,
+    COUNT(p.id) AS count
+  FROM Categories c
+  LEFT JOIN Products p ON c.id = p.category_id
+  GROUP BY c.id, c.name, c.icon
+  ORDER BY c.id;
+`);
+
+const categories = rows.map(row => ({
+  name: row.name,
+  id: row.id,
+  icon: row.icon,
+  count: row.count + '+'
+}));
+ res.json(categories);
 }

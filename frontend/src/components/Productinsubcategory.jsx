@@ -1,95 +1,140 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  ArrowLeft, 
   Eye,
-  Filter,
   ChevronDown,
   Grid3X3,
   LayoutGrid,
   Search,
-  ChevronLeft,
-  ChevronRight
+  Loader
 } from 'lucide-react';
-import Sort from './Sort.jsx'
-import { useNavigate, useParams } from 'react-router-dom';
-import ProductsDetail from './ProductsDetail';
+import axios from 'axios';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+
 const ProductListingPage = () => {
   const [products, setProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState('default');
-  const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [gridSize, setGridSize] = useState(4);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-      const { subcategoryId } = useParams(); // ✅ ดึงค่าจาก URL
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [gridSize, setGridSize] = useState(4);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  
+  const { subcategoryId } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const observer = useRef();
+  
   const productsPerPage = 12;
- const navigate = useNavigate();
-  // Mock data - ในการใช้งานจริงจะ fetch จาก API
-   useEffect(() => {
-    fetch(`http://localhost:5000/api/store/subcategoryP/${subcategoryId}`)
-      .then(res => res.json())
-      .then(data => setProducts(data))
-      .catch(err => console.error('Error fetching categories:', err));
-  }, [subcategoryId]);
   
-    useEffect(() => {
-      const initial = {};
-      products.forEach(subcatP => {
-        initial[subcatP.id]=products.length;
-      });
-         setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    });
-  
+  // ดึงค่า sort จาก URL parameters
+  const sortBy = searchParams.get('sort') || 'default';
+
   const sortOptions = [
-    { value: 'default', label: 'เรียงตามความเกี่ยวข้อง' },
-    { value: 'newest', label: 'มาใหม่' },
-     { value: 'hotseller', label: 'ขายดี' },
-       { value: 'topseller', label: 'ยอดขายสูงสุด' },
+    { value: 'default', label: 'เรียงตามความเกี่ยวข้อง', path: '' },
+    { value: 'newest', label: 'มาใหม่', path: '?sort=newest' },
+    { value: 'hotseller', label: 'ขายดี', path: '?sort=hotseller' },
+    { value: 'topseller', label: 'ยอดขายสูงสุด', path: '?sort=topseller' },
+    { value: 'price-high', label: 'ราคาสูงไปต่ำ', path: '?sort=price-high' },
+    { value: 'price-low', label: 'ราคาต่ำไปสูง', path: '?sort=price-low' }
   ];
 
-  const filteredAndSortedProducts = React.useMemo(() => {
-  let filtered = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchProducts = async (page = 1, isLoadMore = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+    
+    try {
+      const res = await axios.get(`http://localhost:5000/api/store/subcategoryP/${subcategoryId}`, {
+        params: {
+          currentPage: page,
+          limit: productsPerPage,
+          subcategoryId,
+          sort: sortBy, // ส่ง sort parameter ไปให้ backend
+          search: searchTerm // ส่ง search term ไปให้ backend
+        }
+      });
 
-  switch (sortBy) {
-    case 'newest':
-      return filtered.sort((a, b) => b.isNew - a.isNew);
-    case 'hotseller':
-      return filtered.sort((a, b) => b.monthlyPurchases - a.monthlyPurchases);
-    case 'topseller':
-      return filtered.sort((a, b) => b.totalPurchases - a.totalPurchases);
-    case 'name-asc':
-      return filtered.sort((a, b) => a.name.localeCompare(b.name));
-    case 'name-desc':
-      return filtered.sort((a, b) => b.name.localeCompare(a.name));
-    default:
-      return filtered;
-  }
-}, [products, searchTerm, sortBy]);
-
-  const totalPages = Math.ceil(filteredAndSortedProducts.length / productsPerPage);
-  const currentProducts = filteredAndSortedProducts.slice(
-    (currentPage - 1) * productsPerPage,
-    currentPage * productsPerPage
-  );
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+      const newProducts = res.data.products;
+      
+      if (isLoadMore) {
+        setProducts(prev => [...prev, ...newProducts]);
+      } else {
+        setProducts(newProducts);
+      }
+      
+      // ตรวจสอบว่ายังมีข้อมูลเหลือไหม
+      setHasMore(newProducts.length === productsPerPage);
+      
+    } catch (err) {
+      console.error(err);
+    }
+    
+    setLoading(false);
+    setLoadingMore(false);
   };
+
+  // Reset และ fetch ใหม่เมื่อ subcategoryId, sortBy หรือ searchTerm เปลี่ยน
+  useEffect(() => {
+    setProducts([]);
+    setCurrentPage(1);
+    setHasMore(true);
+    fetchProducts(1, false);
+  }, [subcategoryId, sortBy, searchTerm]);
+
+  // Load more เมื่อ currentPage เปลี่ยน
+  useEffect(() => {
+    if (currentPage > 1) {
+      fetchProducts(currentPage, true);
+    }
+  }, [currentPage]);
+
+  // Infinite scroll callback
+  const lastProductElementRef = useCallback(node => {
+    if (loadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !loading) {
+        setCurrentPage(prevPage => prevPage + 1);
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [loadingMore, hasMore, loading]);
 
   const handleViewDetails = (productId) => {
-    console.log(productId)
-    // Here you would typically navigate to product details page
-    navigate(`/detailProducts/${productId}`)
+    navigate(`/detailProducts/${productId}`);
   };
 
-  const ProductCard = ({ product }) => {
+  const handleSortChange = (option) => {
+    const currentPath = window.location.pathname;
+    navigate(`${currentPath}${option.path}`);
+    setShowSortDropdown(false);
+  };
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm !== '') {
+        setProducts([]);
+        setCurrentPage(1);
+        setHasMore(true);
+        fetchProducts(1, false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const ProductCard = ({ product, isLast }) => {
     return (
-      <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden border border-gray-100">
+      <div 
+        ref={isLast ? lastProductElementRef : null}
+        className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 overflow-hidden border border-gray-100"
+      >
         <div className="relative overflow-hidden">
           <img
             src={product.image}
@@ -99,6 +144,7 @@ const ProductListingPage = () => {
               e.target.src = `https://via.placeholder.com/400x300/6366f1/ffffff?text=${encodeURIComponent(product.name)}`;
             }}
           />
+          
           {/* New Badge */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {product.isNew && (
@@ -130,11 +176,19 @@ const ProductListingPage = () => {
           <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-4 line-clamp-2 group-hover:text-blue-600 transition-colors">
             {product.name}
           </h3>
-
+          
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-lg sm:text-xl font-bold text-blue-600">
+                {product.price}
+              </span>
+            </div>
+          </div>
+          
           <div className="flex justify-center">
             <button 
               onClick={() => handleViewDetails(product.id)}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-semibold rounded-full hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
+              className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-semibold rounded-full hover:shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
             >
               <Eye size={14} />
               ดูรายละเอียด
@@ -145,77 +199,7 @@ const ProductListingPage = () => {
     );
   };
 
-  const Pagination = () => {
-    const getPageNumbers = () => {
-      const delta = 2;
-      const range = [];
-      const rangeWithDots = [];
-
-      for (let i = Math.max(2, currentPage - delta); 
-           i <= Math.min(totalPages - 1, currentPage + delta); 
-           i++) {
-        range.push(i);
-      }
-
-      if (currentPage - delta > 2) {
-        rangeWithDots.push(1, '...');
-      } else {
-        rangeWithDots.push(1);
-      }
-
-      rangeWithDots.push(...range);
-
-      if (currentPage + delta < totalPages - 1) {
-        rangeWithDots.push('...', totalPages);
-      } else {
-        rangeWithDots.push(totalPages);
-      }
-
-      return rangeWithDots.filter((item, index, arr) => arr.indexOf(item) === index);
-    };
-
-    return (
-      <div className="flex flex-wrap items-center justify-center gap-2 mt-12">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <ChevronLeft size={16} className="mr-1" />
-          ก่อนหน้า
-        </button>
-
-        {getPageNumbers().map((pageNumber, index) => (
-          pageNumber === '...' ? (
-            <span key={index} className="px-3 py-2 text-sm text-gray-500">...</span>
-          ) : (
-            <button
-              key={pageNumber}
-              onClick={() => handlePageChange(pageNumber)}
-              className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                currentPage === pageNumber
-                  ? 'text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg'
-                  : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {pageNumber}
-            </button>
-          )
-        ))}
-
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          ถัดไป
-          <ChevronRight size={16} className="ml-1" />
-        </button>
-      </div>
-    );
-  };
-
-  if (loading) {
+  if (loading && products.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
@@ -261,11 +245,7 @@ const ProductListingPage = () => {
                     {sortOptions.map((option) => (
                       <button
                         key={option.value}
-                        onClick={() => {
-                          setSortBy(option.value);
-                          setShowSortDropdown(false);
-                          setCurrentPage(1);
-                        }}
+                        onClick={() => handleSortChange(option)}
                         className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl transition-colors"
                       >
                         {option.label}
@@ -299,26 +279,46 @@ const ProductListingPage = () => {
         </div>
 
         {/* Products Grid */}
-        {currentProducts.length > 0 ? (
+        {products.length > 0 ? (
           <>
             <div className={`grid gap-3 sm:gap-4 lg:gap-6 mx-2 sm:mx-0 ${
               gridSize === 3 
                 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3' 
                 : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4'
             }`}>
-              {currentProducts.map((product, index) => (
+              {products.map((product, index) => (
                 <div
-                  key={product.id}
+                  key={`${product.id}-${index}`}
                   className="opacity-0 animate-[fadeInUp_0.6s_ease-out_forwards]"
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  style={{ animationDelay: `${(index % productsPerPage) * 0.1}s` }}
                 >
-                  <ProductCard product={product} />
+                  <ProductCard 
+                    product={product} 
+                    isLast={index === products.length - 1}
+                  />
                 </div>
               ))}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && <Pagination />}
+            {/* Loading More Indicator */}
+            {loadingMore && (
+              <div className="flex justify-center items-center py-8">
+                <div className="flex items-center gap-2 text-blue-600">
+                  <Loader size={20} className="animate-spin" />
+                  <span className="text-sm font-medium">กำลังโหลดเพิ่มเติม...</span>
+                </div>
+              </div>
+            )}
+
+            {/* End of Results */}
+            {!hasMore && products.length > 0 && (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-center">
+                  <div className="text-4xl mb-2">🎉</div>
+                  <p className="text-gray-500 text-sm">แสดงสินค้าครบทุกรายการแล้ว</p>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center py-20">

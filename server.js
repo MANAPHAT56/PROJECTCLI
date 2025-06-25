@@ -6,12 +6,14 @@ const worksRouter = require('./routes/work');
 const contactRouter = require('./routes/contact');
 const articlesRouter = require('./routes/articles');
 const newsRouter = require('./routes/news');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 app.use(cors({
    origin: 'http://localhost:5173',
   methods: ['GET', 'POST'],
   credentials: true,
 }));
+app.use(cookieParser());
 app.use('/api/home', homeRouter); // Base path
 app.use('/api/store', storeRouter); // Base path
 app.use('/api/works', worksRouter); // Base path

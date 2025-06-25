@@ -204,7 +204,7 @@ const SubcategoryProductDetail = () => {
       </div>
 
       {/* Price */}
-      {/* <div className="mb-8">
+      <div className="mb-8">
         <div className="flex items-center space-x-4 mb-2">
           <span className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
             {productData.price}
@@ -212,7 +212,7 @@ const SubcategoryProductDetail = () => {
           <span className="text-xl text-slate-400 line-through">{productData.originalPrice}</span>
         </div>
         <p className="text-slate-600">รวม VAT แล้ว ไม่รวมค่าจัดส่ง</p>
-      </div> */}
+      </div>
 
       {/* Color Variants */}
       {/* <div className="mb-8">
