@@ -4,7 +4,7 @@ CREATE TABLE Products (
   price DECIMAL(10,2) NOT NULL,
   description VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
   image_Main_path VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
-  image_Sub_path VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
+  image_Sub_path JSON, -- เพิ่ม field สำหรับ path รูปภาพ
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   category_id INT NOT NULL,
   subcategory_id INT NOT NULL,

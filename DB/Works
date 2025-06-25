@@ -1,0 +1,18 @@
+CREATE TABLE Works (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  main_description TEXT NOT NULL,
+  sub_description TEXT,
+  cover_image VARCHAR(255), -- ภาพผลงานหลัก
+  secondary_images JSON,    -- ภาพผลงานย่อย
+  secondary_assets JSON,    -- ภาพรอง เช่น โลโก้ลูกค้า, mockup เพิ่มเติม
+  main_category_id INT NOT NULL,
+  subcategory_id INT NOT NULL,
+  product_reference_id INT, -- อ้างอิงสินค้าที่ใช้ในงาน
+  is_custom BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_sample BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (main_category_id) REFERENCES Categories(id),
+  FOREIGN KEY (subcategory_id) REFERENCES secondary_assetsubcategories(id),
+  FOREIGN KEY (product_reference_id) REFERENCES Products(id)
+);

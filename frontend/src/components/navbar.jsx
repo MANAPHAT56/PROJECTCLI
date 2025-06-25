@@ -34,7 +34,6 @@ const ModernNavbar = () => {
       icon: Package,
       dropdown: [
         { name: 'สินค้าธรรมดา', to: '/categories-with-products' },
-        { name: 'สินค้าพรีเมี่ยม', to: '/newProductsall' },
         {
           name: 'หมวดหมู่สินค้า',
           to: '#',
@@ -48,8 +47,8 @@ const ModernNavbar = () => {
     },
     { name: 'ขั้นตอนการสั่งซื้อ', to: '/HowtoBuy', icon: ShoppingCart },
     { name: 'เกี่ยวกับเรา', to: '/Aboutus', icon: Users },
-        { name: 'โปรไฟล์', to: '#', icon: Award },
-    { name: 'เพจfacebook', to: '#', icon: FileText }
+        { name: 'ผลงานเเละตัวอย่าง', to: '/works', icon: Award },
+    { name: 'ข่าวสารเเละกิจกรรม', to: '#', icon: FileText }
   ];
    return navigationItem;
 };

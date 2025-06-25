@@ -8,8 +8,8 @@ import ProductsDetail from './components/ProductsDetail';
 import Productinsubcategory from './components/Productinsubcategory';
 import Aboutus from './components/Aboutus';
 import HowtoBuy from './components/HowtoBuy';
-import NewProductsall from './components/newproductsAll';
 import Admin from './components/Admin';
+import Works from './components/Works';
 const App = () => {
   return (
     <Router>
@@ -56,7 +56,7 @@ const App = () => {
           path="/P_insubcategory/:subcategoryId"
           element={
             <>
-              <Productinsubcategory />
+              <Productinsubcategory  />
             </>
             
           }
@@ -81,10 +81,10 @@ const App = () => {
           }
         />
          <Route
-          path="/newProductsall"
+          path="/works"
           element={
             <>
-              <NewProductsall />
+              <Works />
             </>
             
           }

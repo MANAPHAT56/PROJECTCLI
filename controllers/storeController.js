@@ -116,22 +116,25 @@ exports.getSubCategorieswithProducts = async (req, res) => {
   
 };
 exports.getProductsInSCategory = async (req, res) => {
-// ฟังก์ชันสำหรับดึงรายการสินค้าแบบ infinite scroll
-
   const { subcategoryId } = req.params;
-  const { 
-    currentPage = 1, 
-    limit = 12, 
-    sort = 'default', 
-    search = '' 
+  const {
+    limit = 12,
+    sort = 'newest',
+    search = '',
+    // Cursor parameters for load more functionality
+    lastCreatedAt,
+    lastId,
+    lastMonthlyPurchases, // สำหรับ hotseller sort
+    lastTotalPurchases,   // สำหรับ topseller sort
+    lastPrice            // สำหรับ price sort
   } = req.query;
 
   try {
-    const offset = (currentPage - 1) * limit;
-    
-    // Base query
+    const parsedLimit = parseInt(limit);
+
+    // --- Base Query ---
     let baseQuery = `
-      SELECT 
+      SELECT
         p.id,
         p.name,
         p.description,
@@ -143,142 +146,175 @@ exports.getProductsInSCategory = async (req, res) => {
         c.name AS category,
         s.name AS subcategory,
         p.image_Main_path as image,
-        CASE 
-          WHEN p.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
-          ELSE 0 
+        CASE
+          WHEN p.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1
+          ELSE 0
         END AS isNew
       FROM Products p
       JOIN Categories c ON p.category_id = c.id
       JOIN subcategories s ON p.subcategory_id = s.id
       WHERE p.subcategory_id = ?
     `;
-
     let queryParams = [subcategoryId];
+    let orderByClause = '';
 
-    // เพิ่มเงื่อนไขการค้นหา
+    // --- Search Condition ---
     if (search && search.trim() !== '') {
       baseQuery += ` AND p.name LIKE ?`;
       queryParams.push(`%${search.trim()}%`);
     }
 
-    // เพิ่มการเรียงลำดับ
-    let orderByClause = '';
+    // --- Sorting and Cursor Logic ---
     switch (sort) {
       case 'newest':
-        orderByClause = 'ORDER BY p.created_at DESC';
+        orderByClause = `ORDER BY p.created_at DESC, p.id DESC`;
+        // Cursor condition for load more
+        if (lastCreatedAt && lastId) {
+          baseQuery += `
+            AND (
+              p.created_at < ?
+              OR (p.created_at = ? AND p.id < ?)
+            )
+          `;
+          queryParams.push(lastCreatedAt, lastCreatedAt, lastId);
+        }
         break;
+
       case 'hotseller':
-        orderByClause = 'ORDER BY p.monthly_purchases DESC';
+        orderByClause = `ORDER BY p.monthly_purchases DESC, p.id DESC`;
+        if (lastMonthlyPurchases !== undefined && lastId) {
+          baseQuery += `
+            AND (
+              p.monthly_purchases < ?
+              OR (p.monthly_purchases = ? AND p.id < ?)
+            )
+          `;
+          queryParams.push(lastMonthlyPurchases, lastMonthlyPurchases, lastId);
+        }
         break;
+
       case 'topseller':
-        orderByClause = 'ORDER BY p.total_purchases DESC';
+        orderByClause = `ORDER BY p.total_purchases DESC, p.id DESC`;
+        if (lastTotalPurchases !== undefined && lastId) {
+          baseQuery += `
+            AND (
+              p.total_purchases < ?
+              OR (p.total_purchases = ? AND p.id < ?)
+            )
+          `;
+          queryParams.push(lastTotalPurchases, lastTotalPurchases, lastId);
+        }
         break;
+
       case 'price-high':
-        orderByClause = 'ORDER BY p.price DESC';
+        orderByClause = `ORDER BY p.price DESC, p.id DESC`;
+        if (lastPrice && lastId) {
+          baseQuery += `
+            AND (
+              p.price < ?
+              OR (p.price = ? AND p.id < ?)
+            )
+          `;
+          queryParams.push(lastPrice, lastPrice, lastId);
+        }
         break;
+
       case 'price-low':
-        orderByClause = 'ORDER BY p.price ASC';
+        orderByClause = `ORDER BY p.price ASC, p.id ASC`;
+        if (lastPrice && lastId) {
+          baseQuery += `
+            AND (
+              p.price > ?
+              OR (p.price = ? AND p.id > ?)
+            )
+          `;
+          queryParams.push(lastPrice, lastPrice, lastId);
+        }
         break;
+
       default:
-        orderByClause = 'ORDER BY p.id DESC'; // default เรียงตาม id
+        orderByClause = 'ORDER BY p.created_at DESC, p.id DESC';
+        if (lastCreatedAt && lastId) {
+          baseQuery += `
+            AND (
+              p.created_at < ?
+              OR (p.created_at = ? AND p.id < ?)
+            )
+          `;
+          queryParams.push(lastCreatedAt, lastCreatedAt, lastId);
+        }
     }
 
-    // สร้าง query สำหรับนับจำนวนทั้งหมด
-    let countQuery = `
-      SELECT COUNT(DISTINCT p.id) as total
-      FROM Products p
-      WHERE p.subcategory_id = ?
-    `;
-    let countParams = [subcategoryId];
+    // --- Final Query ---
+    const finalQuery = `${baseQuery} ${orderByClause} LIMIT ?`;
+    queryParams.push(parsedLimit + 1); // +1 เพื่อเช็คว่ามีข้อมูลเพิ่มเติมไหม
 
-    if (search && search.trim() !== '') {
-      countQuery += ` AND p.name LIKE ?`;
-      countParams.push(`%${search.trim()}%`);
-    }
-
-    // Execute count query
-    const [[countResult]] = await db.query(countQuery, countParams);
-    const totalItems = countResult.total;
-
-    // สร้าง final query พร้อม pagination
-    const finalQuery = `${baseQuery} ${orderByClause} LIMIT ? OFFSET ?`;
-    queryParams.push(parseInt(limit), parseInt(offset));
-
-    // Execute main query
+    // --- Execute Main Query ---
     const [rows] = await db.query(finalQuery, queryParams);
 
-    // ดึงยอดขายสูงสุดในระบบสำหรับ tags
+    // ตรวจสอบว่ามีข้อมูลเพิ่มเติมไหม
+    const hasMore = rows.length > parsedLimit;
+    const products = hasMore ? rows.slice(0, parsedLimit) : rows;
+
+    // --- Fetch Max Purchases for Tags ---
     const [[maxPurchases]] = await db.query(`
-      SELECT 
+      SELECT
         MAX(monthly_purchases) AS max_monthly,
         MAX(total_purchases) AS max_total
       FROM Products
     `);
 
-    // จัดกลุ่มข้อมูลตาม product id
-    const productsMap = new Map();
-
-    for (const row of rows) {
-      if (!productsMap.has(row.id)) {
-        // สร้าง tags
-        const tags = ["แนะนำ"];
-        
-        if (row.isNew) {
-          tags.push("ใหม่ล่าสุด");
-        }
-        
-        if (row.monthly_purchases === maxPurchases.max_monthly) {
-          tags.push("ขายดี");
-        }
-        
-        if (row.total_purchases === maxPurchases.max_total) {
-          tags.push("ยอดขายสูงสุด");
-        }
-
-        productsMap.set(row.id, {
-          id: row.id,
-          name: row.name,
-          price: row.price,
-          description: row.description,
-          category: row.category,
-          subcategory: row.subcategory,
-          monthly_purchases: row.monthly_purchases,
-          total_purchases: row.total_purchases,
-          isNew: row.isNew === 1,
-          tags,
-          image: row.image
-        });
+    // --- Data Processing ---
+    const processedProducts = products.map(row => {
+      const tags = ["แนะนำ"];
+      if (row.isNew) {
+        tags.push("ใหม่ล่าสุด");
+      }
+      if (row.monthly_purchases > 0 && row.monthly_purchases === maxPurchases.max_monthly) {
+        tags.push("ขายดี");
+      }
+      if (row.total_purchases > 0 && row.total_purchases === maxPurchases.max_total) {
+        tags.push("ยอดขายสูงสุด");
       }
 
-      // เพิ่มรูปภาพ
-      // if (row.image_path) {
-      //   const product = productsMap.get(row.id);
-      //   if (!product.images.includes(row.image_path)) {
-      //     product.images.push(row.image_path);
-      //   }
-      // }
+      return {
+        id: row.id,
+        name: row.name,
+        price: row.price,
+        description: row.description,
+        category: row.category,
+        subcategory: row.subcategory,
+        monthly_purchases: row.monthly_purchases,
+        total_purchases: row.total_purchases,
+        created_at: row.created_at,
+        raw_price: row.raw_price,
+        isNew: row.isNew === 1,
+        tags,
+        image: row.image
+      };
+    });
+
+    // --- Calculate Next Cursor ---
+    let nextCursor = null;
+    if (hasMore && processedProducts.length > 0) {
+      const lastProduct = processedProducts[processedProducts.length - 1];
+      nextCursor = {
+        lastCreatedAt: lastProduct.created_at,
+        lastId: lastProduct.id,
+        lastMonthlyPurchases: lastProduct.monthly_purchases,
+        lastTotalPurchases: lastProduct.total_purchases,
+        lastPrice: lastProduct.raw_price
+      };
     }
 
-    // แปลง Map เป็น Array
-    const products = Array.from(productsMap.values());
-
-    // ถ้าไม่มีรูปภาพ ให้ใส่รูป placeholder
-    // products.forEach(product => {
-    //   if (product.images.length === 0) {
-    //     product.images = [`https://via.placeholder.com/400x300/6366f1/ffffff?text=${encodeURIComponent(product.name)}`];
-    //   }
-    //   // ใช้รูปแรกเป็น image หลัก
-    //   product.image = product.images[0];
-    // });
-
+    // --- Response ---
     res.json({
-      products,
-      pagination: {
-        currentPage: parseInt(currentPage),
-        limit: parseInt(limit),
-        totalItems,
-        totalPages: Math.ceil(totalItems / limit),
-        hasMore: (currentPage * limit) < totalItems
+      products: processedProducts,
+      loadMore: {
+        hasMore,
+        nextCursor,
+        currentCount: processedProducts.length,
+        requestedLimit: parsedLimit
       }
     });
 
