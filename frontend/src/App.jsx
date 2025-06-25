@@ -9,7 +9,7 @@ import Productinsubcategory from './components/Productinsubcategory';
 import Aboutus from './components/Aboutus';
 import HowtoBuy from './components/HowtoBuy';
 import NewProductsall from './components/newproductsAll';
-import Login from './components/Login';
+import Admin from './components/Admin';
 const App = () => {
   return (
     <Router>
@@ -89,7 +89,7 @@ const App = () => {
             
           }
         />
-          <Route path="/Login" element={<><Login /></>}/>
+             <Route path="/admin" element={<><Admin /></>}/>
         {/* 
         <Route path="/products/all" element={<ProductsAll />} />
         <Route path="/products/recommended" element={<ProductsRecommended />} />
