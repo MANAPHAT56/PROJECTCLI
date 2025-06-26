@@ -1,366 +1,406 @@
 const {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
-  DeleteObjectsCommand, // Added for potential batch delete in S3 if needed
+  paginateListObjectsV2,
 } = require('@aws-sdk/client-s3');
 const multer = require('multer');
+const path = require('path');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
-require('dotenv').config(); // Make sure your .env file is loaded
+const db = require('../db')
+const s3 = new S3Client({ region: 'ap-southeast-1' });
+const BUCKET_NAME = 'your-bucket-name';
 
-// S3 Client setup
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
-});
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'photong'; // Get bucket name from .env or default
-
-// Multer config: stores files in /tmp/uploads temporarily
-const upload = multer({ dest: '/tmp/uploads' });
-
-// Database connection pool (assuming ../db.js exports a connection pool)
-const pool = require('../db');
-
-// --- Helper Functions ---
-
-/**
- * Releases a database connection back to the pool.
- * @param {mysql.Connection} connection - The database connection to release.
- */
-const releaseConnection = (connection) => {
-  if (connection) {
-    connection.release();
-  }
+// Database connection
+const dbConfig = {
+  host: 'db',
+  user: 'root',
+  password: 'mypassword',
+  database: 'my_db'
 };
 
-/**
- * Re-orders the display_order of images for a specific product sequentially.
- * @param {string} productId - The ID of the product.
- * @param {mysql.Connection} connection - The database connection (must be within a transaction).
- */
+// Multer config
+const upload = multer({ dest: '/tmp/uploads' });
+
+// ฟังก์ชันสำหรับ reorder display_order
 const reorderDisplayOrder = async (productId, connection) => {
-  const [images] = await connection.query(
+  const [images] = await db.query(
     'SELECT id FROM product_images WHERE product_id = ? ORDER BY display_order ASC, created_at ASC',
     [productId]
   );
-
+  console.log(productId);
+  
   for (let i = 0; i < images.length; i++) {
-    await connection.query(
+    await db.query (
       'UPDATE product_images SET display_order = ? WHERE id = ?',
       [i + 1, images[i].id]
     );
   }
 };
 
-/**
- * Constructs the full public URL for an S3 object.
- * @param {string} s3Key - The S3 object key (e.g., 'images/category/product/file.jpg').
- * @returns {string} The full public URL.
- */
-const getS3PublicUrl = (s3Key) => {
-  // Option 1: Direct S3 URL (most reliable)
-  return `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
-  // Option 2: Custom CDN URL (requires CDN configuration to map s3Key correctly)
-  // return `https://cdn.toteja.co/${s3Key}`; // Make sure this CDN URL maps to your S3Key properly (e.g., if s3Key is 'images/x', CDN should access 'images/x')
-};
-
-
-// --------------------- API Endpoints ---------------------
-
-/**
- * @route POST /api/images/:category/:subcategory/:productId/batch-upload
- * @desc Uploads multiple images for a product to S3 and saves their info to DB.
- * Handles file processing, S3 upload, and DB insert within a transaction.
- * @access Private (e.g., Admin)
- */
+// 1. อัปโหลดรูปภาพใหม่
 exports.uploadImage = [
-  upload.array('images'), // Multer now expects an array of files under the 'images' field
+  upload.single('image'),
   async (req, res) => {
     const { category, subcategory, productId } = req.params;
-    const files = req.files; // `req.files` will be an array of uploaded files
+    const { displayOrder } = req.body; // รับ display_order จาก client
+    const file = req.file;
 
-    if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'No files uploaded.' });
-    }
+    if (!file) return res.status(400).json({ error: 'No file uploaded.' });
 
-    const connection = await pool.getConnection(); // Get a connection from the pool
-    const uploadedResults = [];
-
+    const connection = await mysql.createConnection(dbConfig);
+    
     try {
-      await connection.beginTransaction(); // Start a transaction
+      await connection.beginTransaction();
 
-      for (const file of files) {
-        const timestamp = Date.now();
-        // Construct the S3 Key. This should match your desired path within the S3 bucket.
-        // Using 'images' as the root folder in S3 to match your potential CDN path.
-        const s3Key = `images/${category}/${subcategory}/${productId}/${timestamp}-${file.originalname}`;
+      // สร้าง unique filename
+      const timestamp = Date.now();
+      const filename = `${timestamp}-${file.originalname}`;
+      const s3Key = `products/${category}/${subcategory}/${productId}/${filename}`;
+      
+      // อัปโหลดไฟล์ไป S3
+      const fileStream = fs.createReadStream(file.path);
+      const uploadCmd = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: s3Key,
+        Body: fileStream,
+        ContentType: file.mimetype
+      });
 
-        // Upload file to S3
-        const fileStream = fs.createReadStream(file.path);
-        const uploadCmd = new PutObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: s3Key, // This is the actual path in S3
-          Body: fileStream,
-          ContentType: file.mimetype
-        });
-        await s3Client.send(uploadCmd);
+      await s3.send(uploadCmd);
 
-        // Get the next display_order for new images (always append to the end)
-        const [maxOrderResult] = await connection.query(
+      // หา display_order ถัดไป ถ้าไม่ระบุ
+      let newDisplayOrder = displayOrder;
+      if (!newDisplayOrder) {
+        const [maxOrderResult] = await connection.execute(
           'SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM product_images WHERE product_id = ?',
           [productId]
         );
-        const newDisplayOrder = maxOrderResult[0].next_order;
-
-        // Save image information to the database (store the S3 Key, not the full URL)
-        const [insertResult] = await connection.query(
-          'INSERT INTO product_images (product_id, image_path, display_order) VALUES (?, ?, ?)',
-          [productId, s3Key, newDisplayOrder] // Store S3 Key in DB
+        newDisplayOrder = maxOrderResult[0].next_order;
+      } else {
+        // ถ้าระบุ order มา ต้องเลื่อน order ของรูปอื่นๆ
+        await connection.execute(
+          'UPDATE product_images SET display_order = display_order + 1 WHERE product_id = ? AND display_order >= ?',
+          [productId, newDisplayOrder]
         );
-
-        // Clean up the temporary file
-        fs.unlinkSync(file.path);
-
-        // Prepare response data with the full public URL
-        uploadedResults.push({
-          imageId: insertResult.insertId,
-          imagePath: getS3PublicUrl(s3Key), // Send full URL in response
-          displayOrder: newDisplayOrder
-        });
       }
 
-      await connection.commit(); // Commit the transaction if all operations succeed
-      res.json({ success: true, uploadedImages: uploadedResults, message: 'รูปภาพอัปโหลดสำเร็จ' });
+      // บันทึกข้อมูลลง database
+      const [result] = await connection.execute(
+        'INSERT INTO product_images (product_id, image_path, display_order) VALUES (?, ?, ?)',
+        [productId, s3Key, newDisplayOrder]
+      );
+
+      // ลบไฟล์ชั่วคราว
+      fs.unlinkSync(file.path);
+
+      await connection.commit();
+      
+      res.json({ 
+        success: true, 
+        imageId: result.insertId,
+        imagePath: s3Key,
+        displayOrder: newDisplayOrder
+      });
 
     } catch (err) {
-      await connection.rollback(); // Rollback on error
-      console.error('Batch upload error:', err);
-      // Clean up temp files if any remain due to early error
-      if (files) {
-        files.forEach(file => {
-          try { fs.unlinkSync(file.path); } catch (e) { console.error('Failed to unlink temp file:', e); }
-        });
-      }
-      res.status(500).json({ error: err.message, message: 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ' });
+      await connection.rollback();
+      res.status(500).json({ error: err.message });
     } finally {
-      releaseConnection(connection); // Release the connection back to the pool
+      await connection.end();
     }
   }
 ];
 
-/**
- * @route GET /api/images/:productId/images
- * @desc Retrieves all images (main and supplementary) for a specific product.
- * @access Public
- */
+// 2. ดึงรูปภาพทั้งหมดของสินค้า
 exports.getProductImages = async (req, res) => {
   const { productId } = req.params;
-  const connection = await pool.getConnection();
+  console.log("productId received:", productId);
 
   try {
-    // 1. Fetch supplementary images (sorted by display_order)
-    const [images] = await connection.query(
+    // 1. ดึงภาพรอง
+    const [images] = await db.query(
       'SELECT id, image_path, display_order, created_at FROM product_images WHERE product_id = ? ORDER BY display_order ASC',
       [productId]
     );
 
-    // 2. Fetch main image path from the Products table
-    const [mainImageResult] = await connection.query(
+    // 2. ดึงภาพหลัก
+    const [mainImageResult] = await db.query(
       'SELECT image_Main_path, created_at FROM Products WHERE id = ?',
       [productId]
     );
 
-    let imageList = [];
-    let currentMaxDisplayOrder = 0; // Track max display order for supplementary images
+    const imageList = [];
 
-    // 3. Add main image if it exists
+    // 3. ถ้ามีภาพหลัก
     if (mainImageResult.length > 0 && mainImageResult[0].image_Main_path) {
-      const mainS3Key = mainImageResult[0].image_Main_path; // This is the S3 Key stored in DB
-      const mainImageUrl = getS3PublicUrl(mainS3Key); // Construct full URL
-
       imageList.push({
-        id: 'main-placeholder', // Use a unique temporary ID for the main image in frontend logic
-                                // Frontend will use `mainImageId` from state for actual DB ID
-        image_path: mainImageUrl,
-        display_order: 0, // A temporary order for sorting, frontend will re-calculate
+        id: 'main', // กำหนด id เป็น 'main' หรือ null ก็ได้
+        image_path: mainImageResult[0].image_Main_path,
+        display_order: 1,
         created_at: mainImageResult[0].created_at,
-        isMain: true,
-        // Also include the actual ID of the main image if it exists in product_images
-        // This makes setting main image easier if it's already a supplementary image
-        originalMainImageId: null // If main image is a product_images.id, set it here
+        isMain: true
       });
     }
 
-    // 4. Add supplementary images, ensure their paths are full URLs
-    const processedImages = images.map(img => {
-      const s3Key = img.image_path; // This is the S3 Key stored in DB
-      const imageUrl = getS3PublicUrl(s3Key); // Construct full URL
-      currentMaxDisplayOrder = Math.max(currentMaxDisplayOrder, img.display_order); // Keep track
+    // 4. ภาพรอง + ปรับ display_order + isMain
+    const adjustedImages = images.map((img) => ({
+      ...img,
+      display_order: img.display_order + 1,
+      isMain: false
+    }));
 
-      return {
-        id: img.id, // Actual DB ID
-        image_path: imageUrl,
-        display_order: img.display_order,
-        created_at: img.created_at,
-        isMain: false
-      };
-    });
+    imageList.push(...adjustedImages);
 
-    // Combine all images
-    const allImages = [...imageList, ...processedImages];
-
-    // Sort images by their current display_order from DB
-    // This allows frontend to easily map them to its display logic
-    allImages.sort((a, b) => {
-      // Ensure 'main-placeholder' comes first if present and has display_order 0
-      if (a.id === 'main-placeholder') return -1;
-      if (b.id === 'main-placeholder') return 1;
-      return a.display_order - b.display_order;
-    });
-
-    res.json({ success: true, images: allImages });
+    res.json({ success: true, images: imageList });
   } catch (err) {
-    console.error("❌ Error fetching product images:", err);
+    console.error("❌ Error:", err);
     res.status(500).json({ error: err.message });
-  } finally {
-    releaseConnection(connection);
   }
 };
 
-/**
- * @route GET /api/images/getProductdata/:productId
- * @desc Retrieves basic product data (name, category, subcategory) for image management.
- * @access Public
- */
-exports.getProductdata = async (req, res) => {
-  const { productId } = req.params;
-  const connection = await pool.getConnection();
 
+
+// 3. อัปเดต display_order ของรูปภาพ
+exports.updateImageOrder = async (req, res) => {
+  const { imageId } = req.params;
+  const { newDisplayOrder, productId } = req.body;
+
+  const connection = await mysql.createConnection(dbConfig);
+  
   try {
-    const [rows] = await connection.query(`
-      SELECT
-        p.id,
-        p.name,
-        c.name AS category,
-        s.name AS subcategory,
-        p.image_Main_path AS main_image_s3_key -- Also fetch the current main image S3 key
-      FROM Products p
-      JOIN Categories c ON p.category_id = c.id
-      JOIN subcategories s ON p.subcategory_id = s.id
-      WHERE p.id = ?
-    `, [productId]);
+    await connection.beginTransaction();
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Product not found' });
+    // ดึงข้อมูลรูปเดิม
+    const [currentImage] = await connection.execute(
+      'SELECT display_order, product_id FROM product_images WHERE id = ?',
+      [imageId]
+    );
+
+    if (currentImage.length === 0) {
+      return res.status(404).json({ error: 'Image not found' });
     }
 
-    res.json(rows[0]);
-  } catch (err) {
-    console.error('Get product data error:', err);
-    res.status(500).json({ error: err.message });
-  } finally {
-    releaseConnection(connection);
-  }
-};
+    const currentOrder = currentImage[0].display_order;
+    const actualProductId = currentImage[0].product_id;
 
-/**
- * @route POST /api/images/save-all/:productId
- * @desc Saves all changes to product images (deletions, order updates, main image changes).
- * Handles all operations within a single transaction.
- * @access Private (e.g., Admin)
- */
-exports.saveAllChanges = async (req, res) => {
-  const { productId } = req.params;
-  const {
-    imageOrders,   // Array of { imageId, displayOrder } for supplementary images
-    mainImageId,   // The actual DB ID of the image to be set as main (null if no main)
-    deletedImages  // Array of image IDs to be deleted
-  } = req.body;
-
-  const connection = await pool.getConnection();
-
-  try {
-    await connection.beginTransaction(); // Start a transaction
-
-    // 1. Delete images from S3 and DB
-    if (deletedImages && deletedImages.length > 0) {
-      for (const imageId of deletedImages) {
-        // Fetch S3 Key from DB for deletion
-        const [imageData] = await connection.query(
-          'SELECT image_path FROM product_images WHERE id = ? AND product_id = ?',
-          [imageId, productId]
-        );
-
-        if (imageData.length > 0) {
-          const s3KeyToDelete = imageData[0].image_path; // This is the S3 Key
-          try {
-            await s3Client.send(new DeleteObjectCommand({
-              Bucket: BUCKET_NAME,
-              Key: s3KeyToDelete
-            }));
-          } catch (s3Error) {
-            console.warn(`S3 delete warning for ${s3KeyToDelete}:`, s3Error.message);
-            // Don't throw error if S3 delete fails (e.g., object not found).
-            // Continue to delete from DB to maintain consistency.
-          }
-        }
-        // Delete from database
-        await connection.query('DELETE FROM product_images WHERE id = ? AND product_id = ?', [imageId, productId]);
-      }
+    if (currentOrder === newDisplayOrder) {
+      return res.json({ success: true, message: 'No change needed' });
     }
 
-    // 2. Update display order for remaining supplementary images
-    if (imageOrders && imageOrders.length > 0) {
-      for (const item of imageOrders) {
-        // Only update if it's a real supplementary image (not 'main-placeholder' or similar)
-        if (item.imageId !== 'main-placeholder') {
-          await connection.query(
-            'UPDATE product_images SET display_order = ? WHERE id = ? AND product_id = ?',
-            [item.displayOrder, item.imageId, productId]
-          );
-        }
-      }
-    }
-
-    // 3. Set the main image in the Products table
-    if (mainImageId) { // mainImageId will be the actual DB ID of the selected main image
-      const [mainImageData] = await connection.query(
-        'SELECT image_path FROM product_images WHERE id = ? AND product_id = ?',
-        [mainImageId, productId]
+    if (currentOrder < newDisplayOrder) {
+      // เลื่อนลง: ลดลำดับของรูปที่อยู่ระหว่าง current+1 ถึง new
+      await connection.execute(
+        'UPDATE product_images SET display_order = display_order - 1 WHERE product_id = ? AND display_order > ? AND display_order <= ?',
+        [actualProductId, currentOrder, newDisplayOrder]
       );
-
-      if (mainImageData.length > 0) {
-        // Update Products table with the S3 Key of the new main image
-        await connection.query(
-          'UPDATE Products SET image_Main_path = ? WHERE id = ?',
-          [mainImageData[0].image_path, productId]
-        );
-      }
     } else {
-      // If no mainImageId is provided (e.g., the original main image was deleted
-      // and no other image was set as main), set the main image path to NULL.
-      await connection.query(
-        'UPDATE Products SET image_Main_path = NULL WHERE id = ?',
-        [productId]
+      // เลื่อนขึ้น: เพิ่มลำดับของรูปที่อยู่ระหว่าง new ถึง current-1
+      await connection.execute(
+        'UPDATE product_images SET display_order = display_order + 1 WHERE product_id = ? AND display_order >= ? AND display_order < ?',
+        [actualProductId, newDisplayOrder, currentOrder]
       );
     }
 
-    // 4. Re-order supplementary images to ensure sequential display_order in DB
-    // This helps maintain a clean display_order column after deletions/re-ordering
-    await reorderDisplayOrder(productId, connection);
+    // อัปเดตลำดับของรูปที่เลือก
+    await connection.execute(
+      'UPDATE product_images SET display_order = ? WHERE id = ?',
+      [newDisplayOrder, imageId]
+    );
 
-    await connection.commit(); // Commit the transaction
-    res.json({ success: true, message: 'บันทึกการเปลี่ยนแปลงสำเร็จ!' });
+    await connection.commit();
+    res.json({ success: true });
 
   } catch (err) {
-    await connection.rollback(); // Rollback on any error
-    console.error('Save all changes error:', err);
-    res.status(500).json({ error: err.message, message: 'เกิดข้อผิดพลาดในการบันทึกการเปลี่ยนแปลง' });
+    await connection.rollback();
+    res.status(500).json({ error: err.message });
   } finally {
-    releaseConnection(connection); // Release the connection
+    await connection.end();
   }
 };
+
+// 4. อัปเดตลำดับรูปหลายรูปพร้อมกัน (drag & drop)
+exports.reorderImages = async (req, res) => {
+  const { productId } = req.params;
+  const { imageOrders } = req.body; // [{ imageId: 1, displayOrder: 1 }, ...]
+
+  const connection = await mysql.createConnection(dbConfig);
+  
+  try {
+    await connection.beginTransaction();
+
+    // อัปเดตลำดับแต่ละรูป
+    for (const item of imageOrders) {
+      await connection.execute(
+        'UPDATE product_images SET display_order = ? WHERE id = ? AND product_id = ?',
+        [item.displayOrder, item.imageId, productId]
+      );
+    }
+
+    await connection.commit();
+    res.json({ success: true });
+
+  } catch (err) {
+    await connection.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    await connection.end();
+  }
+};
+
+// 5. ลบรูปภาพ
+exports.deleteImage = async (req, res) => {
+  const { category, subcategory, productId, imageId } = req.params;
+
+  const connection = await mysql.createConnection(dbConfig);
+  
+  try {
+    await connection.beginTransaction();
+
+    // ดึงข้อมูลรูปที่จะลบ
+    const [imageData] = await connection.execute(
+      'SELECT image_path, display_order FROM product_images WHERE id = ? AND product_id = ?',
+      [imageId, productId]
+    );
+
+    if (imageData.length === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    const imagePath = imageData[0].image_path;
+    const deletedOrder = imageData[0].display_order;
+
+    // ลบจาก S3
+    await s3.send(new DeleteObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: imagePath
+    }));
+
+    // ลบจาก database
+    await connection.execute(
+      'DELETE FROM product_images WHERE id = ?',
+      [imageId]
+    );
+
+    // อัปเดตลำดับของรูปที่เหลือ
+    await connection.execute(
+      'UPDATE product_images SET display_order = display_order - 1 WHERE product_id = ? AND display_order > ?',
+      [productId, deletedOrder]
+    );
+
+    await connection.commit();
+    res.json({ success: true });
+
+  } catch (err) {
+    await connection.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    await connection.end();
+  }
+};
+
+// 6. ลบรูปทั้งหมดของสินค้า
+exports.deleteAllProductImages = async (req, res) => {
+  const { category, subcategory, productId } = req.params;
+  const prefix = `products/${category}/${subcategory}/${productId}/`;
+
+  const connection = await mysql.createConnection(dbConfig);
+  
+  try {
+    await connection.beginTransaction();
+
+    // ลบไฟล์จาก S3
+    const paginator = paginateListObjectsV2(
+      { client: s3 },
+      { Bucket: BUCKET_NAME, Prefix: prefix }
+    );
+
+    for await (const page of paginator) {
+      if (page.Contents) {
+        for (const object of page.Contents) {
+          await s3.send(new DeleteObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: object.Key
+          }));
+        }
+      }
+    }
+
+    // ลบจาก database
+    await connection.execute(
+      'DELETE FROM product_images WHERE product_id = ?',
+      [productId]
+    );
+
+    await connection.commit();
+    res.json({ success: true });
+
+  } catch (err) {
+    await connection.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    await connection.end();
+  }
+};
+
+// 7. ตั้งรูปเป็นรูปหลัก (display_order = 1)
+exports.setMainImage = async (req, res) => {
+  const { imageId } = req.params;
+  const { productId } = req.body;
+
+  const connection = await mysql.createConnection(dbConfig);
+  
+  try {
+    await connection.beginTransaction();
+
+    // ดึงข้อมูลรูปปัจจุบัน
+    const [currentImage] = await connection.execute(
+      'SELECT display_order FROM product_images WHERE id = ? AND product_id = ?',
+      [imageId, productId]
+    );
+
+    if (currentImage.length === 0) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    const currentOrder = currentImage[0].display_order;
+
+    // เลื่อนรูปอื่นๆ ลงมา
+    await connection.execute(
+      'UPDATE product_images SET display_order = display_order + 1 WHERE product_id = ? AND display_order < ?',
+      [productId, currentOrder]
+    );
+
+    // ตั้งรูปนี้เป็น order 1
+    await connection.execute(
+      'UPDATE product_images SET display_order = 1 WHERE id = ?',
+      [imageId]
+    );
+
+    await connection.commit();
+    res.json({ success: true });
+
+  } catch (err) {
+    await connection.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    await connection.end();
+  }
+};
+exports.getProductdata = async(req,res)=>{
+  const{productId} = req.params;
+  const [rows] = await db.query(`
+  SELECT 
+    p.id,
+    p.name,
+    c.name AS category,
+    s.name AS subcategory
+  FROM Products p
+  JOIN Categories c ON p.category_id = c.id
+  JOIN subcategories s ON p.subcategory_id = s.id
+  WHERE p.id = ?
+`, [productId]);
+res.json(rows);
+}

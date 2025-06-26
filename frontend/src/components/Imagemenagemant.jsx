@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Upload,
-  Trash2,
-  Save,
-  X,
-  Star,
-  Image,
+import { 
+  Upload, 
+  Trash2, 
+  Save, 
+  X, 
+  Star, 
+  Image as ImageIcon,
   GripVertical,
   Plus,
   Check,
@@ -14,173 +14,97 @@ import {
   ArrowDown,
   Eye
 } from 'lucide-react';
-
+import { useParams } from 'react-router-dom';
 const ProductImageManager = () => {
-  const [images, setImages] = useState([]); // Stores current images, including main image
-  const [productId] = useState('1'); // You can change this or get from useParams
+    const [images, setImages] = useState([]);
+    const {productId}= useParams();
+       useEffect(() => {
+        fetch(`http://localhost:5000/api/images/${productId}/images`)
+          .then(res => res.json())
+          .then(data => setImages(data.images))
+          .catch(err => console.error('Error fetching categories:', err));
+      }, [productId]);
+      
+//   const [images, setImages] = useState([
+//     {
+//       id: 1,
+//       image_path: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400',
+//       display_order: 1,
+//       isMain: true
+//     },
+//     {
+//       id: 2,
+//       image_path: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+//       display_order: 2,
+//       isMain: false
+//     },
+//     {
+//       id: 3,
+//       image_path: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400',
+//       display_order: 3,
+//       isMain: false
+//     },
+//     {
+//       id: 4,
+//       image_path: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400',
+//       display_order: 4,
+//       isMain: false
+//     }
+//   ]);
+  
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverItem, setDragOverItem] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [notification, setNotification] = useState(null);
-  const [productData, setProductData] = useState({});
-
-  // States to track changes for saving
-  const [deletedImages, setDeletedImages] = useState(new Set()); // IDs of images marked for deletion
-  const [mainImageId, setMainImageId] = useState(null); // The actual DB ID of the image set as main
-  const [hasChanges, setHasChanges] = useState(false); // Flag to enable/disable save button
-
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
+  const [productData,setProductData] = useState({}) ;
 
-  // --- Effect Hooks ---
-  // Fetch product data and images on component mount or productId change
+  // Mock product data
+ useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  fetch(`http://localhost:5000/api/images/getProductdata/${productId}`)
+    .then(res => res.json())
+    .then(data => setProductData(data))
+    .catch(err => console.error('Error fetching categories:', err));
+}, [productId]);
   useEffect(() => {
-    fetchProductData();
-    fetchImages();
-  }, [productId]);
+    // Simulate loading images
+    console.log('Loading images for product:', productData.id);
+  }, []);
 
-  // Effect to determine if there are unsaved changes
-  useEffect(() => {
-    // Check if current `images` array is different from fetched images (after re-ordering)
-    // Check if `deletedImages` set is not empty
-    // Check if `mainImageId` is different from original `productData.main_image_s3_key`
-    // (This part can be complex if you want to track exact pixel-perfect changes.
-    // For simplicity, we mark `hasChanges` true on any user interaction that modifies data)
-    // The current setup already sets hasChanges to true on any modification, which is fine.
-  }, [images, deletedImages, mainImageId, productData]);
-
-
-  // --- Data Fetching ---
-  const fetchProductData = async () => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/images/getProductdata/${productId}`);
-      if (!response.ok) throw new Error('Failed to fetch product data');
-      const data = await response.json();
-      setProductData(data);
-      // Initialize mainImageId based on fetched product data (S3 Key)
-      // We'll need to map S3 Key to actual image ID from product_images table if it exists there
-      // For now, assume `mainImageId` state stores the DB ID.
-      // We will adjust the logic for `mainImageId` when fetching images.
-    } catch (err) {
-      console.error('Error fetching product data:', err);
-      showNotification('ไม่สามารถดึงข้อมูลสินค้าได้', 'error');
-    }
-  };
-
-  const fetchImages = async () => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/images/${productId}/images`);
-      if (!response.ok) throw new Error('Failed to fetch images');
-      const data = await response.json();
-
-      if (data.success) {
-        // Initialize images state with fetched data
-        // Sort images based on display_order from backend
-        const fetchedImages = data.images.sort((a, b) => a.display_order - b.display_order);
-
-        setImages(fetchedImages.map((img, index) => ({
-          ...img,
-          display_order: index + 1, // Re-assign 1-based display order for frontend display
-                                   // This ensures no gaps if images were deleted previously
-        })));
-
-        // Find and set the initial mainImageId (actual DB ID)
-        const currentMainImage = fetchedImages.find(img => img.isMain);
-        if (currentMainImage && currentMainImage.id !== 'main-placeholder') { // Exclude the temporary placeholder ID
-          setMainImageId(currentMainImage.id);
-        } else if (currentMainImage && currentMainImage.id === 'main-placeholder' && productData.main_image_s3_key) {
-          // If the fetched main image is just a placeholder and we have an S3 key,
-          // find the corresponding supplementary image ID if it exists.
-          const actualMainImage = fetchedImages.find(img => img.image_path === currentMainImage.image_path && img.id !== 'main-placeholder');
-          if (actualMainImage) {
-            setMainImageId(actualMainImage.id);
-          } else {
-            // If main image is just from Products.image_Main_path and not in product_images,
-            // its ID is null.
-            setMainImageId(null);
-          }
-        } else {
-           setMainImageId(null); // No main image initially
-        }
-
-
-        // Reset deleted images and changes on fresh fetch
-        setDeletedImages(new Set());
-        setHasChanges(false);
-
-      }
-    } catch (err) {
-      console.error('Error fetching images:', err);
-      showNotification('ไม่สามารถดึงรูปภาพได้', 'error');
-    }
-  };
-
-  // --- UI Notifications ---
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // --- File Selection & Upload ---
-  const handleFileSelect = async (event) => {
+  const handleFileSelect = (event) => {
     const files = Array.from(event.target.files);
-    // Check if product data is loaded before allowing file selection
-    if (!productData.category || !productData.subcategory) {
-      showNotification('กรุณารอให้ข้อมูลสินค้าโหลดเสร็จก่อน', 'error');
-      return;
-    }
-
-    if (files.length === 0) return;
-
-    setSelectedFiles([]); // Clear selected files UI if you have one
-    setIsUploading(true);
-
-    const formData = new FormData();
+    setSelectedFiles(files);
+    
+    // Create preview URLs
     files.forEach(file => {
-      formData.append('images', file); // 'images' must match backend's upload.array('images')
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newImage = {
+          id: Date.now() + Math.random(),
+          image_path: e.target.result,
+          display_order: images.length + 1,
+          isMain: images.length === 0,
+          file: file, // Store file for upload
+          isNew: true
+        };
+        setImages(prev => [...prev, newImage]);
+      };
+      reader.readAsDataURL(file);
     });
-
-    try {
-      const response = await fetch(
-        `http://localhost:5000/api/images/${productData.category}/${productData.subcategory}/${productId}/batch-upload`,
-        {
-          method: 'POST',
-          body: formData
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Upload failed');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        showNotification(result.message || 'อัปโหลดรูปภาพสำเร็จ');
-        // Re-fetch images to update the UI with new images and correct orders
-        await fetchImages();
-        setHasChanges(true); // Mark as changed, though new uploads typically save immediately
-      } else {
-        showNotification(result.message || 'อัปโหลดรูปภาพล้มเหลว', 'error');
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      showNotification(err.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'error');
-    } finally {
-      setIsUploading(false);
-      // Clear file input regardless of success/failure
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
   };
 
-  // --- Drag & Drop Handlers ---
   const handleDragStart = (e, item) => {
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', item.id); // Set data for Firefox compatibility
   };
 
   const handleDragOver = (e, item) => {
@@ -196,468 +120,404 @@ const ProductImageManager = () => {
 
   const handleDrop = (e, dropItem) => {
     e.preventDefault();
-    e.stopPropagation();
-
+    
     if (!draggedItem || draggedItem.id === dropItem.id) return;
 
+    const draggedIndex = images.findIndex(img => img.id === draggedItem.id);
+    const dropIndex = images.findIndex(img => img.id === dropItem.id);
+    
     const newImages = [...images];
-    const draggedIndex = newImages.findIndex(img => img.id === draggedItem.id);
-    const dropIndex = newImages.findIndex(img => img.id === dropItem.id);
-
-    const [removed] = newImages.splice(draggedIndex, 1);
-    newImages.splice(dropIndex, 0, removed);
-
-    // Re-assign display orders based on new visual order
-    const updatedImages = newImages.map((img, index) => ({
-      ...img,
-      display_order: index + 1 // New display order based on current array position
-    }));
-
-    setImages(updatedImages);
-    setDraggedItem(null);
-    setDragOverItem(null);
-    setHasChanges(true); // Mark changes for saving
-    showNotification('ลำดับรูปภาพถูกเปลี่ยนแล้ว กรุณากดบันทึก', 'warning');
-  };
-
-  const handleFileDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!productData.category || !productData.subcategory) {
-      showNotification('กรุณารอให้ข้อมูลสินค้าโหลดเสร็จก่อน', 'error');
-      return;
-    }
-
-    const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-    if (imageFiles.length > 0) {
-      // Call the same batch upload logic as handleFileSelect
-      const formData = new FormData();
-      imageFiles.forEach(file => {
-        formData.append('images', file);
-      });
-
-      setIsUploading(true);
-      fetch(
-        `http://localhost:5000/api/images/${productData.category}/${productData.subcategory}/${productId}/batch-upload`,
-        {
-          method: 'POST',
-          body: formData
-        }
-      )
-        .then(response => {
-          if (!response.ok) return response.json().then(err => { throw new Error(err.message || 'Upload failed'); });
-          return response.json();
-        })
-        .then(result => {
-          if (result.success) {
-            showNotification(result.message || `อัปโหลด ${imageFiles.length} รูปภาพสำเร็จ`);
-            fetchImages(); // Re-fetch images to update UI
-            setHasChanges(true);
-          } else {
-            showNotification(result.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'error');
-          }
-        })
-        .catch(err => {
-          console.error('Drop upload error:', err);
-          showNotification(err.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'error');
-        })
-        .finally(() => {
-          setIsUploading(false);
-        });
-    }
-  };
-
-  // --- Image Manipulation Handlers ---
-  const handleMoveUp = (imageId) => {
-    const currentIndex = images.findIndex(img => img.id === imageId);
-    if (currentIndex <= 0) return; // Cannot move main-placeholder up, or first item up
-
-    const newImages = [...images];
-    // Swap elements
-    [newImages[currentIndex - 1], newImages[currentIndex]] = [newImages[currentIndex], newImages[currentIndex - 1]];
-
-    // Re-assign display orders
+    const [draggedImage] = newImages.splice(draggedIndex, 1);
+    newImages.splice(dropIndex, 0, draggedImage);
+    
+    // Update display orders
     const updatedImages = newImages.map((img, index) => ({
       ...img,
       display_order: index + 1
     }));
-
+    
     setImages(updatedImages);
-    setHasChanges(true);
-    showNotification('ลำดับรูปภาพถูกเปลี่ยนแล้ว กรุณากดบันทึก', 'warning');
+    setDraggedItem(null);
+    setDragOverItem(null);
+    
+    showNotification('ลำดับรูปภาพถูกเปลี่ยนแล้ว');
+  };
+
+  const handleMoveUp = (imageId) => {
+    const currentIndex = images.findIndex(img => img.id === imageId);
+    if (currentIndex === 0) return;
+    
+    const newImages = [...images];
+    [newImages[currentIndex - 1], newImages[currentIndex]] = [newImages[currentIndex], newImages[currentIndex - 1]];
+    
+    const updatedImages = newImages.map((img, index) => ({
+      ...img,
+      display_order: index + 1
+    }));
+    
+    setImages(updatedImages);
   };
 
   const handleMoveDown = (imageId) => {
     const currentIndex = images.findIndex(img => img.id === imageId);
-    if (currentIndex === -1 || currentIndex >= images.length - 1) return;
-
+    if (currentIndex === images.length - 1) return;
+    
     const newImages = [...images];
-    // Swap elements
     [newImages[currentIndex], newImages[currentIndex + 1]] = [newImages[currentIndex + 1], newImages[currentIndex]];
-
-    // Re-assign display orders
+    
     const updatedImages = newImages.map((img, index) => ({
       ...img,
       display_order: index + 1
     }));
-
+    
     setImages(updatedImages);
-    setHasChanges(true);
-    showNotification('ลำดับรูปภาพถูกเปลี่ยนแล้ว กรุณากดบันทึก', 'warning');
   };
 
   const handleSetMain = (imageId) => {
-    // Find the image by its ID (which is the actual DB ID, not 'main-placeholder')
-    const imageToSetMain = images.find(img => img.id === imageId);
-
-    if (!imageToSetMain || imageToSetMain.isMain) return; // Already main or not found
-
-    // Update isMain flag in images state for display
-    const updatedImages = images.map(img => {
-      // If this is the new main image (matched by actual DB ID)
-      if (img.id === imageToSetMain.id) {
-        return { ...img, isMain: true };
-      }
-      // If this was the old main image placeholder
-      if (img.isMain && img.id === 'main-placeholder') {
-        return { ...img, isMain: false }; // Turn off old main image flag
-      }
-      return { ...img, isMain: false }; // Ensure other images are not main
-    });
-
-    // Move the newly set main image to the very first position (display_order 1)
-    const newImagesArray = updatedImages.filter(img => img.id !== imageToSetMain.id);
-    const finalImagesOrder = [{ ...imageToSetMain, isMain: true, display_order: 1 }, ...newImagesArray];
-
-    // Re-assign display_order for all images based on new order
-    const reorderedImages = finalImagesOrder.map((img, index) => ({
+    const updatedImages = images.map(img => ({
       ...img,
-      display_order: index + 1
+      isMain: img.id === imageId
     }));
-
-    setImages(reorderedImages);
-    setMainImageId(imageId); // Store the actual DB ID as the main image ID
-    setHasChanges(true);
-    showNotification('รูปภาพหลักถูกเปลี่ยนแล้ว กรุณากดบันทึก', 'warning');
+    setImages(updatedImages);
+    showNotification('รูปภาพหลักถูกเปลี่ยนแล้ว');
   };
 
   const handleDelete = (imageId) => {
     const imageToDelete = images.find(img => img.id === imageId);
-    if (!imageToDelete) return;
-
-    // Add to deletedImages set if it's a real DB image (not 'main-placeholder')
-    if (imageId !== 'main-placeholder') {
-      setDeletedImages(prev => new Set([...prev, imageId]));
-    }
-
-    // Remove from current images array for immediate UI update
-    let newImages = images.filter(img => img.id !== imageId);
-
-    // If the deleted image was the main image, handle promoting another image
-    if (imageToDelete.isMain) {
-      if (newImages.length > 0) {
-        // Promote the first available image to be the new main image
-        const newMain = newImages[0];
-        newImages = newImages.map((img, idx) => ({
-          ...img,
-          isMain: (idx === 0) ? true : false,
-          display_order: idx + 1 // Re-order after deletion
-        }));
-        setMainImageId(newMain.id !== 'main-placeholder' ? newMain.id : null); // Update mainImageId
-      } else {
-        // No images left, mainImageId should be null
-        setMainImageId(null);
-      }
-    } else {
-      // If a supplementary image was deleted, just re-order
-      newImages = newImages.map((img, idx) => ({
+    if (imageToDelete?.isMain && images.length > 1) {
+      // Set the next image as main
+      const otherImages = images.filter(img => img.id !== imageId);
+      const newMainImage = otherImages[0];
+      const updatedImages = otherImages.map(img => ({
         ...img,
-        display_order: idx + 1
+        isMain: img.id === newMainImage.id
       }));
+      setImages(updatedImages);
+    } else {
+      setImages(images.filter(img => img.id !== imageId));
     }
-
-    setImages(newImages);
-    setHasChanges(true);
-    showNotification('รูปภาพถูกลบแล้ว กรุณากดบันทึก', 'warning');
+    showNotification('รูปภาพถูกลบแล้ว', 'success');
   };
 
-  // --- Save Changes ---
   const handleSave = async () => {
-    setIsUploading(true); // Using isUploading to indicate saving in UI
-
+    setIsUploading(true);
+    
     try {
-      // Prepare image order data for supplementary images only
-      const imageOrders = images
-        .filter(img => img.id !== 'main-placeholder' && !deletedImages.has(img.id)) // Filter out placeholder and deleted ones
-        .map(img => ({
-          imageId: img.id,
-          displayOrder: img.display_order
-        }));
-
-      // Find the actual DB ID of the current main image
-      const currentMain = images.find(img => img.isMain);
-      const mainImageDbId = currentMain && currentMain.id !== 'main-placeholder' ? currentMain.id : null;
-
-      const saveData = {
-        imageOrders,
-        mainImageId: mainImageDbId, // Send actual DB ID, or null
-        deletedImages: Array.from(deletedImages).filter(id => id !== 'main-placeholder')
-      };
-
-      const response = await fetch(`http://localhost:5000/api/images/save-all/${productId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(saveData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Save failed');
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
-        showNotification(result.message || 'บันทึกสำเร็จ!', 'success');
-        // Reset change tracking states after successful save
-        setDeletedImages(new Set());
-        setHasChanges(false);
-        // Re-fetch images to ensure UI reflects the latest state from DB
-        await fetchImages();
-      } else {
-        showNotification(result.message || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
-      }
-
+      // Simulate API calls
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Here you would make actual API calls to:
+      // 1. Upload new images
+      // 2. Update image orders
+      // 3. Set main image
+      
+      console.log('Saving images:', images);
+      showNotification('บันทึกสำเร็จ!', 'success');
+      
+      // Remove isNew flag from images
+      const savedImages = images.map(img => ({ ...img, isNew: false }));
+      setImages(savedImages);
+      
     } catch (error) {
-      console.error('Save error:', error);
-      showNotification(error.message || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
+      showNotification('เกิดข้อผิดพลาดในการบันทึก', 'error');
     } finally {
       setIsUploading(false);
     }
   };
 
-  // --- Image Card Component ---
-  const ImageCard = ({ image, index }) => (
-    <div
-      className={`relative bg-white border-2 rounded-lg overflow-hidden transition-all duration-200 ${
-        draggedItem?.id === image.id ? 'opacity-50' : ''
-      } ${dragOverItem?.id === image.id ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-      draggable
-      onDragStart={(e) => handleDragStart(e, image)}
-      onDragOver={(e) => handleDragOver(e, image)}
-      onDragEnd={handleDragEnd}
-      onDrop={(e) => handleDrop(e, image)}
-    >
-      {/* Main Image Badge */}
-      {image.isMain && (
-        <div className="absolute top-2 left-2 z-10">
-          <div className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-            <Star size={12} fill="currentColor" />
-            หลัก
-          </div>
-        </div>
-      )}
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
-      {/* Image */}
-      <div className="aspect-square bg-gray-100 flex items-center justify-center">
-        <img
-          src={image.image_path}
-          alt={`Product image ${index + 1}`}
-          className="w-full h-full object-cover cursor-pointer"
-          onClick={() => setPreviewImage(image.image_path)}
-        />
-      </div>
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
-      {/* Controls */}
-      <div className="p-3 bg-white">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-600">#{image.display_order}</span>
-          <div className="flex items-center gap-1">
-            <GripVertical size={16} className="text-gray-400 cursor-move" />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          {/* Move buttons */}
-          <div className="flex gap-1">
-            <button
-              onClick={() => handleMoveUp(image.id)}
-              disabled={index === 0 || image.id === 'main-placeholder'} // Can't move 'main-placeholder'
-              className="p-1 text-gray-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="เลื่อนขึ้น"
-            >
-              <ArrowUp size={16} />
-            </button>
-            <button
-              onClick={() => handleMoveDown(image.id)}
-              disabled={index === images.length - 1 || image.id === 'main-placeholder'} // Can't move 'main-placeholder'
-              className="p-1 text-gray-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="เลื่อนลง"
-            >
-              <ArrowDown size={16} />
-            </button>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-1">
-            {!image.isMain && (image.id !== 'main-placeholder') && ( // Cannot set placeholder as main
-              <button
-                onClick={() => handleSetMain(image.id)}
-                className="p-1 text-gray-500 hover:text-yellow-600"
-                title="ตั้งเป็นรูปหลัก"
-              >
-                <Star size={16} />
-              </button>
-            )}
-            <button
-              onClick={() => setPreviewImage(image.image_path)}
-              className="p-1 text-gray-500 hover:text-blue-600"
-              title="ดูรูปภาพ"
-            >
-              <Eye size={16} />
-            </button>
-            <button
-              onClick={() => handleDelete(image.id)}
-              disabled={images.length === 1 && image.isMain} // Disable delete if only one image and it's main
-              className="p-1 text-gray-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="ลบรูปภาพ"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length > 0) {
+      setSelectedFiles(imageFiles);
+      imageFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const newImage = {
+            id: Date.now() + Math.random(),
+            image_path: e.target.result,
+            display_order: images.length + 1,
+            isMain: images.length === 0,
+            file: file,
+            isNew: true
+          };
+          setImages(prev => [...prev, newImage]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="mt-15 min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">จัดการรูปภาพสินค้า</h1>
-        {productData.name && (
-          <p className="text-gray-600">
-            {productData.name} - {productData.category} / {productData.subcategory}
-          </p>
-        )}
+      <div className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              จัดการรูปภาพสินค้า
+            </h1>
+            <p className="text-gray-400 mt-1">{productData.name}</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+            >
+              <Plus size={18} />
+              เพิ่มรูปภาพ
+            </button>
+            
+            <button
+              onClick={handleSave}
+              disabled={isUploading}
+              className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 rounded-xl transition-all duration-200 shadow-lg hover:shadow-green-500/25 disabled:cursor-not-allowed"
+            >
+              {isUploading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Save size={18} />
+              )}
+              {isUploading ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Notification */}
       {notification && (
-        <div className={`mb-4 p-4 rounded-lg border ${
-          notification.type === 'error'
-            ? 'bg-red-50 border-red-200 text-red-700'
-            : notification.type === 'warning'
-              ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
-              : 'bg-green-50 border-green-200 text-green-700'
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg backdrop-blur-sm transition-all duration-300 ${
+          notification.type === 'success' 
+            ? 'bg-green-600/90 text-white' 
+            : 'bg-red-600/90 text-white'
         }`}>
-          <div className="flex items-center gap-2">
-            {notification.type === 'error' && <AlertCircle size={20} />}
-            {notification.type === 'warning' && <AlertCircle size={20} className="text-yellow-500" />}
-            {notification.type === 'success' && <Check size={20} className="text-green-500" />}
-            {notification.message}
+          {notification.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
+          {notification.message}
+        </div>
+      )}
+
+      <div className="p-6">
+        {/* Drop Zone */}
+        <div
+          ref={dropZoneRef}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDrop={handleFileDrop}
+          className="border-2 border-dashed border-gray-600 hover:border-blue-500 rounded-2xl p-8 mb-6 transition-all duration-200 bg-gray-900/30 backdrop-blur-sm"
+        >
+          <div className="text-center">
+            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-gray-300 mb-2">ลากและวางไฟล์รูปภาพที่นี่</p>
+            <p className="text-gray-500 text-sm">หรือ</p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-2 px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl transition-colors"
+            >
+              เลือกไฟล์
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Actions */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          {/* Upload button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading || !productData.category || !productData.subcategory}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Upload size={20} />
-            {isUploading ? 'กำลังอัปโหลด...' : !productData.category ? 'กำลังโหลดข้อมูล...' : 'เพิ่มรูปภาพ'}
-          </button>
+        {/* Images Grid */}
+        {images.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {images.map((image, index) => (
+              <div
+                key={image.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, image)}
+                onDragOver={(e) => handleDragOver(e, image)}
+                onDrop={(e) => handleDrop(e, image)}
+                onDragEnd={handleDragEnd}
+                className={`relative group bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-move hover:shadow-2xl hover:shadow-blue-500/20 ${
+                  dragOverItem?.id === image.id ? 'border-blue-500 scale-105' : 'border-gray-700'
+                } ${
+                  image.isMain ? 'ring-2 ring-yellow-500/50' : ''
+                } ${
+                  image.isNew ? 'ring-2 ring-green-500/50' : ''
+                }`}
+              >
+                {/* Main Image Badge */}
+                {image.isMain && (
+                  <div className="absolute top-3 left-3 z-10 flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                    <Star size={12} />
+                    หลัก
+                  </div>
+                )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+                {/* New Image Badge */}
+                {image.isNew && (
+                  <div className="absolute top-3 right-3 z-10 px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                    ใหม่
+                  </div>
+                )}
 
-          {/* Image count */}
-          <span className="text-gray-600">
-            รูปภาพทั้งหมด: {images.filter(img => img.id !== 'main-placeholder').length} รูป
-          </span>
-        </div>
+                {/* Order Number */}
+                <div className="absolute bottom-3 left-3 z-10 w-8 h-8 bg-gray-900/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white font-bold text-sm border border-gray-600">
+                  {image.display_order}
+                </div>
 
-        {/* Save button */}
-        {hasChanges && (
-          <button
-            onClick={handleSave}
-            disabled={isUploading}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-          >
-            <Save size={20} />
-            {isUploading ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลง'}
-          </button>
+                {/* Image */}
+                <div className="aspect-square relative overflow-hidden">
+                  <img
+                    src={image.image_path}
+                    alt={`Product image ${image.display_order}`}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/400x400/374151/9CA3AF?text=No+Image';
+                    }}
+                  />
+                  
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
+
+                {/* Controls */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="flex items-center gap-2 bg-gray-900/90 backdrop-blur-sm rounded-xl p-2 shadow-lg border border-gray-700">
+                    {/* Move Up */}
+                    <button
+                      onClick={() => handleMoveUp(image.id)}
+                      disabled={index === 0}
+                      className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+                      title="เลื่อนขึ้น"
+                    >
+                      <ArrowUp size={16} />
+                    </button>
+
+                    {/* Move Down */}
+                    <button
+                      onClick={() => handleMoveDown(image.id)}
+                      disabled={index === images.length - 1}
+                      className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+                      title="เลื่อนลง"
+                    >
+                      <ArrowDown size={16} />
+                    </button>
+
+                    {/* Set as Main */}
+                    {!image.isMain && (
+                      <button
+                        onClick={() => handleSetMain(image.id)}
+                        className="p-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-colors"
+                        title="ตั้งเป็นรูปหลัก"
+                      >
+                        <Star size={16} />
+                      </button>
+                    )}
+
+                    {/* Preview */}
+                    <button
+                      onClick={() => setPreviewImage(image)}
+                      className="p-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                      title="ดูตัวอย่าง"
+                    >
+                      <Eye size={16} />
+                    </button>
+
+                    {/* Delete */}
+                    <button
+                      onClick={() => handleDelete(image.id)}
+                      className="p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                      title="ลบรูปภาพ"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Drag Handle */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                  <GripVertical size={24} className="text-white drop-shadow-lg" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <ImageIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">ยังไม่มีรูปภาพ</h3>
+            <p className="text-gray-500 mb-4">เริ่มเพิ่มรูปภาพสินค้าของคุณ</p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl transition-all"
+            >
+              เพิ่มรูปภาพแรก
+            </button>
+          </div>
         )}
-      </div>
 
-      {/* Drop zone */}
-      <div
-        ref={dropZoneRef}
-        onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        onDrop={handleFileDrop}
-        className="border-2 border-dashed border-gray-300 rounded-lg p-8 mb-6 text-center hover:border-gray-400 transition-colors"
-      >
-        <div className="flex flex-col items-center gap-2">
-          <Image size={48} className="text-gray-400" />
-          <p className="text-gray-600">ลากและวางรูปภาพที่นี่ หรือคลิกปุ่ม "เพิ่มรูปภาพ"</p>
-          <p className="text-sm text-gray-500">รองรับไฟล์ JPG, PNG, GIF</p>
+        {/* Instructions */}
+        <div className="mt-8 bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
+          <h3 className="text-lg font-semibold mb-4 text-gray-200">คำแนะนำการใช้งาน</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-400">
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+              <span>ลากและวางรูปภาพเพื่อเปลี่ยนลำดับ</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+              <span>คลิกดาวเพื่อตั้งเป็นรูปหลัก</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+              <span>รองรับไฟล์ JPG, PNG, WebP</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+              <span>ขนาดไฟล์สูงสุด 5MB ต่อรูป</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Images Grid */}
-      {images.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {images.map((image, index) => (
-            // Only render actual images, filter out main-placeholder if it's not needed for rendering
-            // The isMain flag will dictate which is main.
-            <ImageCard key={image.id} image={image} index={index} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 text-gray-500">
-          <Image size={64} className="mx-auto mb-4 text-gray-300" />
-          <p>ยังไม่มีรูปภาพ</p>
-          <p className="text-sm">เพิ่มรูปภาพแรกเพื่อเริ่มต้น</p>
-        </div>
-      )}
-
-      {/* Image Preview Modal */}
+      {/* Preview Modal */}
       {previewImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-4xl max-h-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="relative max-w-4xl max-h-[90vh] m-4">
             <button
               onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 z-10 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100"
-              title="ปิด"
+              className="absolute -top-4 -right-4 p-2 bg-gray-900 hover:bg-gray-800 rounded-full transition-colors z-10"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
             <img
-              src={previewImage}
+              src={previewImage.image_path}
               alt="Preview"
-              className="max-w-full max-h-full object-contain rounded-lg"
+              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
             />
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-gray-700">
+              <p className="text-white text-sm">รูปที่ {previewImage.display_order}</p>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Hidden File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
     </div>
   );
 };
