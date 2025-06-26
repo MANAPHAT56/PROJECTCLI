@@ -13,9 +13,10 @@ import {
   Layout,
   Zap,
   Palette,
-  RefreshCw
+  RefreshCw,
+  ArrowUpDown
 } from 'lucide-react';
-
+import { useNavigate } from 'react-router-dom';
 const WorksPortfolio = () => {
   const [works, setWorks] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -23,6 +24,7 @@ const WorksPortfolio = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState('all');
+  const [selectedSort, setSelectedSort] = useState('latest');
   const [showFilters, setShowFilters] = useState(false);
   const [gridSize, setGridSize] = useState(2);
   const [loading, setLoading] = useState(true);
@@ -31,9 +33,24 @@ const WorksPortfolio = () => {
   const [favorites, setFavorites] = useState(new Set());
   const [page, setPage] = useState(1);
   const [error, setError] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+ const navigate=useNavigate();
+  const API_BASE_URL = 'http://localhost:5000/api';
 
-  const API_BASE_URL =   'http://localhost:5000/api';
-
+  // Sort options
+  const sortOptions = [
+    { value: 'latest', label: 'ล่าสุด', description: 'ผลงานที่สร้างล่าสุด' },
+    { value: 'oldest', label: 'เก่าสุด', description: 'ผลงานที่สร้างเก่าสุด' },
+    { value: 'custom_only', label: 'งานสั่งทำ', description: 'เฉพาะงานสั่งทำพิเศษ' },
+    { value: 'sample_only', label: 'งานตัวอย่าง', description: 'เฉพาะงานตัวอย่าง' },
+    { value: 'category_asc', label: 'หมวดหมู่ (ก-ฮ)', description: 'เรียงตามหมวดหมู่ A-Z' },
+    { value: 'category_desc', label: 'หมวดหมู่ (ฮ-ก)', description: 'เรียงตามหมวดหมู่ Z-A' }
+  ];
+    const handleViewDetails = (workId) => {
+    // Here you would typically navigate to product details page
+    navigate(`/worksDetail/${workId}`)
+     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   // Fetch categories and subcategories on mount
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -59,7 +76,7 @@ const WorksPortfolio = () => {
     };
 
     fetchInitialData();
-  }, [API_BASE_URL]);
+  }, []);
 
   // Fetch works with filters
   const fetchWorks = useCallback(async (pageNum = 1, isLoadMore = false) => {
@@ -67,6 +84,7 @@ const WorksPortfolio = () => {
       const params = new URLSearchParams({
         page: pageNum.toString(),
         limit: '12',
+        sort: selectedSort,
         ...(selectedCategory !== 'all' && { category: selectedCategory }),
         ...(selectedSubcategory !== 'all' && { subcategory: selectedSubcategory }),
         ...(searchTerm && { search: searchTerm })
@@ -87,13 +105,44 @@ const WorksPortfolio = () => {
       }
 
       setHasMore(data.hasMore);
+      setTotalCount(data.pagination?.total || 0);
       setPage(pageNum);
       setError(null);
     } catch (error) {
       console.error('Error fetching works:', error);
       setError('Failed to load works');
     }
-  }, [selectedCategory, selectedSubcategory, searchTerm, API_BASE_URL]);
+  }, [selectedCategory, selectedSubcategory, searchTerm, selectedSort]);
+
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    const fetchSubcategoriesByCategory = async () => {
+      if (selectedCategory === 'all') {
+        try {
+          const response = await fetch(`${API_BASE_URL}/works/subcategories`);
+          if (response.ok) {
+            const data = await response.json();
+            setSubcategories(data);
+          }
+        } catch (error) {
+          console.error('Error fetching all subcategories:', error);
+        }
+      } else {
+        try {
+          const response = await fetch(`${API_BASE_URL}/works/subcategories/${selectedCategory}`);
+          if (response.ok) {
+            const data = await response.json();
+            setSubcategories(data);
+          }
+        } catch (error) {
+          console.error('Error fetching subcategories by category:', error);
+        }
+      }
+    };
+
+    fetchSubcategoriesByCategory();
+    setSelectedSubcategory('all'); // Reset subcategory when category changes
+  }, [selectedCategory]);
 
   // Initial load and filter changes
   useEffect(() => {
@@ -120,6 +169,7 @@ const WorksPortfolio = () => {
     setSearchTerm('');
     setSelectedCategory('all');
     setSelectedSubcategory('all');
+    setSelectedSort('latest');
   };
 
   const toggleFavorite = (workId) => {
@@ -188,7 +238,7 @@ const WorksPortfolio = () => {
         {/* Category indicator */}
         <div className="absolute bottom-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
           <span className="px-2 py-1 bg-black/50 backdrop-blur-sm text-white text-xs rounded-full">
-            {categories.find(cat => cat.id === work.main_category_id)?.name || 'ไม่ระบุ'}
+            {work.category_name || 'ไม่ระบุหมวดหมู่'}
           </span>
         </div>
       </div>
@@ -210,7 +260,7 @@ const WorksPortfolio = () => {
             </span>
           </div>
           
-          <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md">
+          <button onClick={() => handleViewDetails(work.id)} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md">
             ดูรายละเอียด
           </button>
         </div>
@@ -271,7 +321,11 @@ const WorksPortfolio = () => {
           <div className="mt-4 flex items-center justify-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Layout size={16} className="text-blue-500" />
-              <span>พบผลงาน {works.length} รายการ</span>
+              <span>พบผลงาน {totalCount.toLocaleString()} รายการ</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Eye size={16} className="text-green-500" />
+              <span>แสดง {works.length} รายการ</span>
             </div>
           </div>
         </div>
@@ -304,7 +358,7 @@ const WorksPortfolio = () => {
             </div>
 
             {/* Filters */}
-            <div className={`grid gap-4 ${showFilters || 'hidden md:grid'} md:grid-cols-2 lg:grid-cols-4`}>
+            <div className={`grid gap-4 ${showFilters || 'hidden md:grid'} md:grid-cols-2 lg:grid-cols-5`}>
               {/* Category Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่หลัก</label>
@@ -337,9 +391,25 @@ const WorksPortfolio = () => {
                 </select>
               </div>
 
+              {/* Sort Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">เรียงโดย</label>
+                <select
+                  value={selectedSort}
+                  onChange={(e) => setSelectedSort(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm"
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Grid Size */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">รูปแบบการแสดงผล</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">รูปแบบแสดงผล</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setGridSize(2)}
@@ -348,7 +418,7 @@ const WorksPortfolio = () => {
                     }`}
                   >
                     <Grid2X2 size={16} />
-                    <span className="hidden sm:inline">2 คอลัมน์</span>
+                    <span className="hidden sm:inline">2x2</span>
                   </button>
                   <button
                     onClick={() => setGridSize(3)}
@@ -357,7 +427,7 @@ const WorksPortfolio = () => {
                     }`}
                   >
                     <Grid3X3 size={16} />
-                    <span className="hidden sm:inline">3 คอลัมน์</span>
+                    <span className="hidden sm:inline">3x3</span>
                   </button>
                 </div>
               </div>
@@ -367,8 +437,9 @@ const WorksPortfolio = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">รีเซ็ตตัวกรอง</label>
                 <button
                   onClick={resetFilters}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-lg transition-all duration-300 shadow-md"
+                  className="w-full px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-lg transition-all duration-300 shadow-md flex items-center justify-center gap-2"
                 >
+                  <RefreshCw size={16} />
                   รีเซ็ต
                 </button>
               </div>
@@ -386,7 +457,7 @@ const WorksPortfolio = () => {
             }`}>
               {works.map((work, index) => (
                 <div
-                  key={work.id}
+                  key={`${work.id}-${index}`}
                   className="opacity-0 animate-[fadeInUp_0.6s_ease-out_forwards]"
                   style={{ animationDelay: `${(index % 12) * 0.1}s` }}
                 >
@@ -401,15 +472,18 @@ const WorksPortfolio = () => {
                 <button
                   onClick={loadMoreWorks}
                   disabled={loadingMore}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 text-white font-medium rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+                  className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 text-white font-medium rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
                 >
                   {loadingMore ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                       กำลังโหลด...
                     </>
                   ) : (
-                    'โหลดเพิ่มเติม'
+                    <>
+                      <ArrowUpDown size={16} />
+                      โหลดเพิ่มเติม ({works.length}/{totalCount})
+                    </>
                   )}
                 </button>
               </div>
@@ -417,9 +491,10 @@ const WorksPortfolio = () => {
 
             {/* End of Results */}
             {!hasMore && works.length > 0 && (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-2">🎉</div>
-                <p className="text-gray-600">คุณได้ดูผลงานทั้งหมดแล้ว</p>
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🎉</div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">คุณได้ดูผลงานทั้งหมดแล้ว</h3>
+                <p className="text-gray-600">ทั้งหมด {totalCount.toLocaleString()} รายการ</p>
               </div>
             )}
           </>
@@ -430,8 +505,9 @@ const WorksPortfolio = () => {
             <p className="text-gray-600 mb-6">ลองเปลี่ยนคำค้นหาหรือตัวกรองใหม่</p>
             <button
               onClick={resetFilters}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-300 shadow-md"
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-300 shadow-md flex items-center gap-2 mx-auto"
             >
+              <RefreshCw size={16} />
               รีเซ็ตตัวกรอง
             </button>
           </div>

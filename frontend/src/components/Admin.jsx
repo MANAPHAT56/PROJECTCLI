@@ -742,24 +742,23 @@ const AdminDashboard = () => {
                     placeholder="จำนวนสต็อก"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">รูปภาพหลัก</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={formData.image_Main_path}
-                      onChange={(e) => setFormData({...formData, image_Main_path: e.target.value})}
-                      className="flex-1 px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
-                      placeholder="URL รูปภาพ"
-                    />
-                    <button className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-gray-300">
-                      <Upload size={16} />
-                    </button>
-                  </div>
-                </div>
+                <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => {
+            // เก็บข้อมูลแบบฟอร์มชั่วคราวก่อนไปหน้าจัดการรูปภาพ
+            localStorage.setItem('productFormDraft', JSON.stringify(formData));
+            window.location.href = `/admin/products/${selectedItem?.id || 'new'}/images`;
+          }}
+          className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2"
+        >
+          <ImageIcon size={16} />
+          จัดการรูปภาพสินค้า
+        </button>
+      </div>
               </div>
               
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">รูปภาพรอง</label>
                 <div className="flex items-center gap-2">
                   <input
@@ -774,7 +773,7 @@ const AdminDashboard = () => {
                   </button>
                 </div>
 
-              </div>
+              </div> */}
             </>
           );
         case 'categories':

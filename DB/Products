@@ -3,8 +3,7 @@ CREATE TABLE Products (
   name VARCHAR(255) NOT NULL,
   price DECIMAL(10,2) NOT NULL,
   description VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
-  image_Main_path VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
-  image_Sub_path JSON, -- เพิ่ม field สำหรับ path รูปภาพ
+  image_Main_path VARCHAR(500)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   category_id INT NOT NULL,
   subcategory_id INT NOT NULL,
@@ -19,7 +18,8 @@ CREATE TABLE product_images (
   id INT PRIMARY KEY AUTO_INCREMENT,
   product_id INT NOT NULL,
   image_path VARCHAR(500) NOT NULL,
+  is_main_image BOOLEAN DEFAULT FALSE, -- เพิ่ม: สำหรับระบุว่าเป็นรูปหลักหรือไม่
+  display_order INT DEFAULT 0,        -- เพิ่ม: สำหรับระบุลำดับการแสดงผลของรูปภาพ
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (product_id) REFERENCES Products(id) ON DELETE CASCADE
 );
-

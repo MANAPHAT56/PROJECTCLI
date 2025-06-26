@@ -52,34 +52,6 @@ const SubcategoryProductDetail = () => {
     }, 500);
     });
   
-  // const productData = {
-  //   id: 1,
-  //   name: "โซฟาผ้า 3 ที่นั่ง Premium Comfort",
-  //   subcategory: "โซฟาและเก้าอี้",
-  //   category: "เฟอร์นิเจอร์ห้องนั่งเล่น",
-  //   sold: 1250,
-  //   description: "โซฟาผ้าคุณภาพพรีเมียม ออกแบบเพื่อความสะดวกสบายสูงสุด ผลิตจากผ้าคุณภาพดีนำเข้าจากยุโรป มีโครงสร้างไม้แข็งแรง ฟองน้ำหนาพิเศษ เหมาะสำหรับการนั่งเล่นและพักผ่อนในบ้าน",
-  //   // specifications: {
-  //   //   "ขนาด": "200 x 85 x 80 ซม.",
-  //   //   "วัสดุโครง": "ไม้ยางพารา",
-  //   //   "วัสดุเบาะ": "ฟองน้ำ High Density",
-  //   //   "วัสดุหุ้ม": "ผ้า Cotton Blend",
-  //   //   "น้ำหนัก": "45 กก.",
-  //   //   "รับน้ำหนัก": "300 กก."
-  //   // },
-  //   images: [
-  //     "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&h=600&fit=crop",
-  //     "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&h=600&fit=crop",
-  //     "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=800&h=600&fit=crop",
-  //     "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=800&h=600&fit=crop"
-  //   ],
-  //   // variants: [
-  //   //   { name: "สีเทาอ่อน", color: "#E5E7EB", inStock: true },
-  //   //   { name: "สีน้ำเงินเข้ม", color: "#1E40AF", inStock: true },
-  //   //   { name: "สีน้ำตาลอ่อน", color: "#92400E", inStock: false }
-  //   // ],
-  //   tags: ["ขายดี", "ยอดขายสูงสุด", "ใหม่ล่าสุด", "แนะนำ"]
-  // };
    useEffect(() => {
     fetch(`http://localhost:5000/api/store/RealatedPdeatail/${productId}`)
       .then(res => res.json())
@@ -123,11 +95,6 @@ const SubcategoryProductDetail = () => {
             </button>
           </div>
         </div>
-
-        {/* Discount Badge */}
-        {/* <div className="absolute top-4 left-4 px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-full font-bold shadow-lg">
-          -{productData.discount}
-        </div> */}
       </div>
 
       {/* Thumbnail Images */}

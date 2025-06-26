@@ -47,8 +47,7 @@ const ModernNavbar = () => {
     },
     { name: 'ขั้นตอนการสั่งซื้อ', to: '/HowtoBuy', icon: ShoppingCart },
     { name: 'เกี่ยวกับเรา', to: '/Aboutus', icon: Users },
-        { name: 'ผลงานเเละตัวอย่าง', to: '/works', icon: Award },
-    { name: 'ข่าวสารเเละกิจกรรม', to: '#', icon: FileText }
+        { name: 'ผลงานเเละตัวอย่าง', to: '/works', icon: Award }
   ];
    return navigationItem;
 };

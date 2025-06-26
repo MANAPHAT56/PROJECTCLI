@@ -10,6 +10,8 @@ import Aboutus from './components/Aboutus';
 import HowtoBuy from './components/HowtoBuy';
 import Admin from './components/Admin';
 import Works from './components/Works';
+import WorksDetail from './components/WorksDetail';
+import ProductImagesManagement from './components/Imagemenagemant';
 const App = () => {
   return (
     <Router>
@@ -90,6 +92,8 @@ const App = () => {
           }
         />
              <Route path="/admin" element={<><Admin /></>}/>
+            <Route path="/worksDetail/:workId" element={<><WorksDetail /></>}/>
+            <Route path="/images/:productId" element={<><ProductImagesManagement /></>}/>
         {/* 
         <Route path="/products/all" element={<ProductsAll />} />
         <Route path="/products/recommended" element={<ProductsRecommended />} />

@@ -424,13 +424,14 @@ router.get('/subcategoryP/:subcategoryId', exports.getProductsBySubcategory);
 router.get('/product/:productId', exports.getProductDetail);
 */
 
-exports.getProductDetail = async(req,res)=>{
-     const productId = req.params.productId;
+exports.getProductDetail = async (req, res) => {
+  const productId = req.params.productId;
 
   try {
-    // 1. ดึงข้อมูลสินค้า + category/subcategory + images
-    const [rows] = await db.query(`
-      SELECT 
+    // 1. ดึงข้อมูลสินค้า + category/subcategory
+    // เราจะดึงรูปภาพแยกกัน เพื่อให้จัดการ main_image และ sub_images ได้ง่าย
+    const [productRows] = await db.query(`
+      SELECT
         p.id,
         p.name,
         p.description,
@@ -439,34 +440,43 @@ exports.getProductDetail = async(req,res)=>{
         p.total_purchases,
         CONCAT('฿', FORMAT(p.price, 0)) AS price,
         p.total_purchases AS sold,
+        p.image_Main_path, -- ดึงรูปหลักจาก Products โดยตรง
         c.name AS category,
-        s.name AS subcategory,
-        pi.image_path
+        s.name AS subcategory
       FROM Products p
       JOIN Categories c ON p.category_id = c.id
       JOIN subcategories s ON p.subcategory_id = s.id
-      LEFT JOIN product_images pi ON p.id = pi.product_id
       WHERE p.id = ?
     `, [productId]);
 
-    if (rows.length === 0) {
+    if (productRows.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const row = rows[0];
+    const product = productRows[0]; // ข้อมูลสินค้าหลัก
 
-    // 2. ดึงยอดขายสูงสุดในระบบ
+    // 2. ดึงรูปภาพย่อยจากตาราง product_images
+    const [subImageRows] = await db.query(`
+      SELECT image_path
+      FROM product_images
+      WHERE product_id = ?
+      ORDER BY display_order ASC, created_at ASC; -- เรียงลำดับตาม display_order
+    `, [productId]);
+
+    const subImages = subImageRows.map(row => row.image_path);
+
+    // 3. ดึงยอดขายสูงสุดในระบบ (ยังคงเหมือนเดิม)
     const [[maxPurchases]] = await db.query(`
-      SELECT 
+      SELECT
         MAX(monthly_purchases) AS max_monthly,
         MAX(total_purchases) AS max_total
       FROM Products
     `);
 
-    // 3. ตรวจสอบเงื่อนไข tag
+    // 4. ตรวจสอบเงื่อนไข tag (ยังคงเหมือนเดิม)
     const tags = ["แนะนำ"];
 
-    const createdAt = new Date(row.created_at);
+    const createdAt = new Date(product.created_at);
     const now = new Date();
     const oneWeekAgo = new Date(now);
     oneWeekAgo.setDate(now.getDate() - 7);
@@ -475,40 +485,48 @@ exports.getProductDetail = async(req,res)=>{
       tags.push("ใหม่ล่าสุด");
     }
 
-    if (row.monthly_purchases === maxPurchases.max_monthly) {
+    if (product.monthly_purchases > 0 && product.monthly_purchases === maxPurchases.max_monthly) {
       tags.push("ขายดี");
     }
 
-    if (row.total_purchases === maxPurchases.max_total) {
+    if (product.total_purchases > 0 && product.total_purchases === maxPurchases.max_total) {
       tags.push("ยอดขายสูงสุด");
     }
 
-    // 4. สร้าง object หลัก
+    // 5. สร้าง object ผลลัพธ์
     const productData = {
-      id: row.id,
-      name: row.name,
-      price : row.price,
-      description: row.description,
-      sold: row.sold,
-      category: row.category,
-      subcategory: row.subcategory,
-      images: [],
-      tags // <-- ใส่ tags เข้าไปตรงนี้
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      description: product.description,
+      sold: product.sold,
+      category: product.category,
+      subcategory: product.subcategory,
+      images: [], // เตรียม array สำหรับเก็บ path รูปภาพทั้งหมด
+      tags
     };
 
-    // รวมรูปภาพทั้งหมด
-    for (const r of rows) {
-      if (r.image_path) {
-        productData.images.push(r.image_path);
-      }
+    // 6. รวมรูปภาพทั้งหมดเข้าด้วยกัน
+    // เพิ่มรูปหลักก่อน
+    if (product.image_Main_path) {
+      productData.images.push(product.image_Main_path);
+    }
+
+    // เพิ่มรูปภาพย่อย
+    productData.images.push(...subImages);
+
+    // ถ้าไม่มีรูปภาพเลย (ทั้งหลักและย่อย) ให้ใส่รูป placeholder
+    if (productData.images.length === 0) {
+      productData.images = [`https://via.placeholder.com/400x300/6366f1/ffffff?text=${encodeURIComponent(productData.name)}`];
     }
 
     res.json(productData);
+
   } catch (error) {
     console.error('Error fetching product:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 exports.getNewProducts = async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -548,7 +566,6 @@ exports.getTopseller = async(req,res)=>{
     p.price,
     p.description,
     p.image_Main_path,
-    p.image_Sub_path,
     p.monthly_purchases,
     p.total_purchases,
     c.name AS category,

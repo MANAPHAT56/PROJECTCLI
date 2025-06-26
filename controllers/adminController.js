@@ -9,7 +9,6 @@ const offset = (page - 1) * limit;
   p.price,
   p.description,
   p.image_Main_path AS image_Main_path,
-  p.image_sub_path,
   p.category_id,
   p.subcategory_id,
   p.stock,
