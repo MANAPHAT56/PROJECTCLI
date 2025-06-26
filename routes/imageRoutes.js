@@ -1,50 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const imageController = require('../controllers/imageController');
+const imagesController = require('../controllers/imageController');
 
 
 // 1. อัปโหลดรูปภาพใหม่
 // POST /api/products/:category/:subcategory/:productId/images
-router.post('/:category/:subcategory/:productId/images', 
-  imageController.uploadImage
-);
+// GET product data for image manager
+router.get('/getProductdata/:productId', imagesController.getProductdata);
 
-// 2. ดึงรูปภาพทั้งหมดของสินค้า
-// GET /api/products/:productId/images
-router.get('/:productId/images', 
-  imageController.getProductImages
-);
+// GET all images for a product
+router.get('/:productId/images', imagesController.getProductImages);
 
-// 3. อัปเดตลำดับรูปภาพเดี่ยว
-// PUT /api/images/:imageId/order
-router.put('/images/:imageId/order', 
-  imageController.updateImageOrder
-);
+// NEW: Batch upload images
+router.post('/:category/:subcategory/:productId/batch-upload', imagesController.uploadImage);
 
-// 4. อัปเดตลำดับรูปภาพหลายรูปพร้อมกัน (สำหรับ drag & drop)
-// PUT /api/products/:productId/images/reorder
-router.put('/:productId/images/reorder', 
-  imageController.reorderImages
-);
+// NEW: Save all changes (deletions, re-orders, main image) in one go
+router.post('/save-all/:productId', imagesController.saveAllChanges);
 
-// 5. ลบรูปภาพเดี่ยว
-// DELETE /api/products/:category/:subcategory/:productId/images/:imageId
-router.delete('/:category/:subcategory/:productId/images/:imageId', 
-  imageController.deleteImage
-);
-
-// 6. ลบรูปภาพทั้งหมดของสินค้า
-// DELETE /api/products/:category/:subcategory/:productId/images
-router.delete('/:category/:subcategory/:productId/images', 
-  imageController.deleteAllProductImages
-);
-
-// 7. ตั้งรูปเป็นรูปหลัก
-// PUT /api/images/:imageId/set-main
-router.put('/images/:imageId/set-main', 
-  imageController.setMainImage
-);
-router.get('/getProductdata/:productId',imageController.getProductdata);
-
+// คุณสามารถลบ routes เก่าที่จัดการทีละอย่างได้ถ้า save-all ครอบคลุมแล้ว
+// router.post('/:category/:subcategory/:productId', imagesController.uploadImage); // Old single upload
+// router.put('/update-order/:imageId', imagesController.updateImageOrder); // Old single order update
+// router.delete('/:imageId', imagesController.deleteImage); // Old single delete
+// router.put('/set-main/:imageId', imagesController.setMainImage); /
 module.exports = router;
 // 
