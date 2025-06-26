@@ -748,7 +748,7 @@ const AdminDashboard = () => {
           onClick={() => {
             // เก็บข้อมูลแบบฟอร์มชั่วคราวก่อนไปหน้าจัดการรูปภาพ
             localStorage.setItem('productFormDraft', JSON.stringify(formData));
-            window.location.href = `/admin/products/${selectedItem?.id || 'new'}/images`;
+            window.location.href = `http://localhost:5000/api/images/${selectedItem?.id} || 'new'}/images`;
           }}
           className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2"
         >

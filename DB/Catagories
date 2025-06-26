@@ -1,22 +1,48 @@
-CREATE TABLE Categories (
+REATE TABLE Categories (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(100) NOT NULL,
-  image_path VARCHAR(500) ,
+  name VARCHAR(100) NOT NULL UNIQUE, -- เพิ่ม UNIQUE constraint ที่นี่
+  image_path VARCHAR(500),
   description VARCHAR(200),
   icon VARCHAR(100) NOT NULL,
   gradient VARCHAR(100) DEFAULT 'from-purple-600 to-blue-600'
 );
 คำสั่ง ALTER TABLE Categories CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ใส่ในcategories
+เข้าใจเลยครับ! คุณต้องการแก้ไขตาราง Categories และ subcategories โดยเฉพาะให้คอลัมน์ name เป็น UNIQUE เพื่อป้องกันชื่อหมวดหมู่หรือหมวดหมู่ย่อยซ้ำกัน
+
+นี่คือ DDL (Data Definition Language) ที่แก้ไขแล้ว:
+
+แก้ไขตาราง Categories
+เราจะเพิ่ม UNIQUE constraint ให้กับคอลัมน์ name เพื่อให้มั่นใจว่าไม่มีหมวดหมู่ที่มีชื่อซ้ำกัน
+
+SQL
+
+CREATE TABLE Categories (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL UNIQUE, -- เพิ่ม UNIQUE constraint ที่นี่
+  image_path VARCHAR(500),
+  description VARCHAR(200),
+  icon VARCHAR(100) NOT NULL,
+  gradient VARCHAR(100) DEFAULT 'from-purple-600 to-blue-600'
+);
+
+-- คำสั่งสำหรับแปลง Character Set
+ALTER TABLE Categories CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+แก้ไขตาราง subcategories
+เช่นเดียวกัน เราจะเพิ่ม UNIQUE constraint ให้กับคอลัมน์ name แต่สิ่งสำคัญคือ ชื่อหมวดหมู่ย่อยต้อง UNIQUE ภายในหมวดหมู่หลักนั้นๆ เท่านั้น (เช่น "Phone" ในหมวด "Electronics" ไม่ควรซ้ำกับ "Phone" ในหมวด "Accessories") เพื่อให้ทำแบบนั้นได้ เราจะใช้ UNIQUE constraint แบบ Composite Key ระหว่าง name และ category_id ครับ
+
+SQL
+
 CREATE TABLE subcategories (
   id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
-    description VARCHAR(200),
-  image_path VARCHAR(500),  -- เก็บ path หรือ URL รูปภาพหมวดหมู่
+  description VARCHAR(200),
+  image_path VARCHAR(500),
   category_id INT NOT NULL,
-    icon VARCHAR(100),
+  icon VARCHAR(100),
   gradient VARCHAR(100) DEFAULT 'from-purple-600 to-blue-600',
   bgGradient VARCHAR(100) DEFAULT 'from-purple-600 to-blue-600',
   accentColor VARCHAR(100) DEFAULT '#FFFFFF',
-    FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE CASCADE
+  FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE CASCADE,
+  UNIQUE (name, category_id) -- เพิ่ม UNIQUE composite constraint ที่นี่
 );
