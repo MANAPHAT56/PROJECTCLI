@@ -2,49 +2,34 @@ const express = require('express');
 const router = express.Router();
 const imageController = require('../controllers/imageController');
 
-
-// 1. อัปโหลดรูปภาพใหม่
-// POST /api/products/:category/:subcategory/:productId/images
-router.post('/:category/:subcategory/:productId/images', 
+// 1. อัปโหลดรูปภาพใหม่ - ตรงกับ Frontend ที่ใช้ใน uploadImageToAPI
+router.post('/upload/:category/:subcategory/:productId', 
   imageController.uploadImage
 );
 
-// 2. ดึงรูปภาพทั้งหมดของสินค้า
-// GET /api/products/:productId/images
+// 2. ดึงรูปภาพทั้งหมดของสินค้า - ตรงกับ Frontend ที่ใช้ใน loadImages
 router.get('/:productId/images', 
   imageController.getProductImages
 );
 
-// 3. อัปเดตลำดับรูปภาพเดี่ยว
-// PUT /api/images/:imageId/order
-router.put('/images/:imageId/order', 
-  imageController.updateImageOrder
+// 3. ดึงข้อมูลสินค้า - ตรงกับ Frontend ที่ใช้ใน loadProductData
+router.get('/getProductdata/:productId',
+  imageController.getProductdata
 );
 
-// 4. อัปเดตลำดับรูปภาพหลายรูปพร้อมกัน (สำหรับ drag & drop)
-// PUT /api/products/:productId/images/reorder
-router.put('/:productId/images/reorder', 
+// 4. อัปเดตลำดับรูปภาพหลายรูปพร้อมกัน - ตรงกับ Frontend ที่ใช้ใน handleSave
+router.put('/reorder/:productId', 
   imageController.reorderImages
 );
 
-// 5. ลบรูปภาพเดี่ยว
-// DELETE /api/products/:category/:subcategory/:productId/images/:imageId
-router.delete('/:category/:subcategory/:productId/images/:imageId', 
+// 5. ลบรูปภาพเดี่ยว - ตรงกับ Frontend ที่ใช้ใน handleDelete
+router.delete('/delete/:category/:subcategory/:productId/:imageId', 
   imageController.deleteImage
 );
 
-// 6. ลบรูปภาพทั้งหมดของสินค้า
-// DELETE /api/products/:category/:subcategory/:productId/images
-router.delete('/:category/:subcategory/:productId/images', 
-  imageController.deleteAllProductImages
+// 6. ดูรูปภาพ - ตรงกับ Frontend ที่ใช้ใน getImageUrl
+router.get('/view/:imagePath',
+  imageController.viewImage
 );
-
-// 7. ตั้งรูปเป็นรูปหลัก
-// PUT /api/images/:imageId/set-main
-router.put('/images/:imageId/set-main', 
-  imageController.setMainImage
-);
-router.get('/getProductdata/:productId',imageController.getProductdata);
 
 module.exports = router;
-// 

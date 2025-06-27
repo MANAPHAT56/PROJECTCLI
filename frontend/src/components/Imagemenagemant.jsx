@@ -12,97 +12,194 @@ import {
   AlertCircle,
   ArrowUp,
   ArrowDown,
-  Eye
+  Eye,
+  Loader
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
+
 const ProductImageManager = () => {
-    const [images, setImages] = useState([]);
-    const {productId}= useParams();
-       useEffect(() => {
-        fetch(`http://localhost:5000/api/images/${productId}/images`)
-          .then(res => res.json())
-          .then(data => setImages(data.images))
-          .catch(err => console.error('Error fetching categories:', err));
-      }, [productId]);
-      
-//   const [images, setImages] = useState([
-//     {
-//       id: 1,
-//       image_path: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400',
-//       display_order: 1,
-//       isMain: true
-//     },
-//     {
-//       id: 2,
-//       image_path: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
-//       display_order: 2,
-//       isMain: false
-//     },
-//     {
-//       id: 3,
-//       image_path: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400',
-//       display_order: 3,
-//       isMain: false
-//     },
-//     {
-//       id: 4,
-//       image_path: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400',
-//       display_order: 4,
-//       isMain: false
-//     }
-//   ]);
-  
+  const [images, setImages] = useState([]);
+  const { productId } = useParams();
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverItem, setDragOverItem] = useState(null);
-  const [selectedFiles, setSelectedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [notification, setNotification] = useState(null);
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
-  const [productData,setProductData] = useState({}) ;
+  const [productData, setProductData] = useState({});
+  const [uploadProgress, setUploadProgress] = useState({});
 
-  // Mock product data
- useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  fetch(`http://localhost:5000/api/images/getProductdata/${productId}`)
-    .then(res => res.json())
-    .then(data => setProductData(data))
-    .catch(err => console.error('Error fetching categories:', err));
-}, [productId]);
+  // โหลดข้อมูลสินค้าและรูปภาพ
   useEffect(() => {
-    // Simulate loading images
-    console.log('Loading images for product:', productData.id);
-  }, []);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    loadProductData();
+    loadImages();
+  }, [productId]);
+
+  const loadProductData = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/images/getProductdata/${productId}`);
+      const data = await response.json();
+       await setProductData(data);
+       console.log(productData)
+      console.log(productData.category);
+      console.log(productData.subcategory)
+   
+    } catch (err) {
+      console.error('Error fetching product data:', err);
+      showNotification('ไม่สามารถโหลดข้อมูลสินค้าได้', 'error');
+    }
+  };
+     console.log(productData)
+      console.log(productData.category);
+      console.log(productData.subcategory)
+  const loadImages = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/images/${productId}/images`);
+      const data = await response.json();
+      if (data.success) {
+        setImages(data.images);
+      }
+    } catch (err) {
+      console.error('Error fetching images:', err);
+      showNotification('ไม่สามารถโหลดรูปภาพได้', 'error');
+    }
+  };
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleFileSelect = (event) => {
-    const files = Array.from(event.target.files);
-    setSelectedFiles(files);
-    
-    // Create preview URLs
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newImage = {
-          id: Date.now() + Math.random(),
-          image_path: e.target.result,
-          display_order: images.length + 1,
-          isMain: images.length === 0,
-          file: file, // Store file for upload
-          isNew: true
-        };
-        setImages(prev => [...prev, newImage]);
-      };
-      reader.readAsDataURL(file);
-    });
+  // อัปโหลดรูปภาพไปยัง API
+  const uploadImageToAPI = async (file, displayOrder = null) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (displayOrder) {
+      formData.append('displayOrder', displayOrder);
+    }
+
+    try {
+          console.log(productData.category);
+          console.log(productData.subcategory);
+      const response = await fetch(
+        `http://localhost:5000/api/images/upload/${productData.category}/${productData.subcategory}/${productId}`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        return result;
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error;
+    }
   };
 
+  // จัดการการเลือกไฟล์
+  const handleFileSelect = async (event) => {
+    const files = Array.from(event.target.files);
+    await handleFilesUpload(files);
+  };
+
+  // จัดการการอัปโหลดไฟล์
+  const handleFilesUpload = async (files) => {
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    const uploadedImages = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileId = `upload-${Date.now()}-${i}`;
+        
+        // เพิ่มไฟล์ที่กำลังอัปโหลดเข้าไปใน state เพื่อแสดง progress
+        setUploadProgress(prev => ({ ...prev, [fileId]: 0 }));
+        
+        // สร้าง preview URL
+        const previewUrl = URL.createObjectURL(file);
+        const tempImage = {
+          id: fileId,
+          image_path: previewUrl,
+          display_order: images.length + uploadedImages.length + 1,
+          isMain: images.length === 0 && uploadedImages.length === 0,
+          isUploading: true,
+          file: file
+        };
+        
+        setImages(prev => [...prev, tempImage]);
+        
+        try {
+          // อัปโหลดไฟล์
+          const result = await uploadImageToAPI(file);
+          
+          // อัปเดตรูปภาพหลังจากอัปโหลดสำเร็จ
+          const uploadedImage = {
+            id: result.imageId,
+            image_path: result.imagePath,
+            display_order: result.displayOrder,
+            isMain: images.length === 0 && uploadedImages.length === 0,
+            isUploading: false
+          };
+          
+          uploadedImages.push(uploadedImage);
+          
+          // อัปเดต state
+          setImages(prev => prev.map(img => 
+            img.id === fileId ? uploadedImage : img
+          ));
+          
+          // ลบ progress
+          setUploadProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[fileId];
+            return newProgress;
+          });
+          
+          // ลบ preview URL
+          URL.revokeObjectURL(previewUrl);
+          
+        } catch (error) {
+          console.error('Upload failed for file:', file.name, error);
+          // ลบรูปที่อัปโหลดไม่สำเร็จ
+          setImages(prev => prev.filter(img => img.id !== fileId));
+          setUploadProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[fileId];
+            return newProgress;
+          });
+          URL.revokeObjectURL(previewUrl);
+          showNotification(`ไม่สามารถอัปโหลด ${file.name} ได้`, 'error');
+        }
+      }
+      
+      if (uploadedImages.length > 0) {
+        showNotification(`อัปโหลดรูปภาพสำเร็จ ${uploadedImages.length} รูป`, 'success');
+      }
+      
+    } catch (error) {
+      console.error('Upload process error:', error);
+      showNotification('เกิดข้อผิดพลาดในการอัปโหลด', 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Drag and Drop handlers
   const handleDragStart = (e, item) => {
+    if (item.isUploading) {
+      e.preventDefault();
+      return;
+    }
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -121,7 +218,7 @@ const ProductImageManager = () => {
   const handleDrop = (e, dropItem) => {
     e.preventDefault();
     
-    if (!draggedItem || draggedItem.id === dropItem.id) return;
+    if (!draggedItem || draggedItem.id === dropItem.id || draggedItem.isUploading || dropItem.isUploading) return;
 
     const draggedIndex = images.findIndex(img => img.id === draggedItem.id);
     const dropIndex = images.findIndex(img => img.id === dropItem.id);
@@ -130,7 +227,7 @@ const ProductImageManager = () => {
     const [draggedImage] = newImages.splice(draggedIndex, 1);
     newImages.splice(dropIndex, 0, draggedImage);
     
-    // Update display orders
+    // อัปเดต display_order
     const updatedImages = newImages.map((img, index) => ({
       ...img,
       display_order: index + 1
@@ -182,49 +279,84 @@ const ProductImageManager = () => {
     showNotification('รูปภาพหลักถูกเปลี่ยนแล้ว');
   };
 
-  const handleDelete = (imageId) => {
-    const imageToDelete = images.find(img => img.id === imageId);
-    if (imageToDelete?.isMain && images.length > 1) {
-      // Set the next image as main
-      const otherImages = images.filter(img => img.id !== imageId);
-      const newMainImage = otherImages[0];
-      const updatedImages = otherImages.map(img => ({
-        ...img,
-        isMain: img.id === newMainImage.id
-      }));
-      setImages(updatedImages);
-    } else {
-      setImages(images.filter(img => img.id !== imageId));
+  // ลบรูปภาพ
+  const handleDelete = async (imageId) => {
+    try {
+      const imageToDelete = images.find(img => img.id === imageId);
+      
+      // ถ้าเป็นรูปที่กำลังอัปโหลดให้ลบได้เลย
+      if (imageToDelete?.isUploading) {
+        setImages(images.filter(img => img.id !== imageId));
+        return;
+      }
+
+      // ลบจาก API
+      const response = await fetch(
+        `http://localhost:5000/api/images/delete/${productData.category}/${productData.subcategory}/${productId}/${imageId}`,
+        { method: 'DELETE' }
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        // ลบจาก state และจัดเรียงใหม่
+        const remainingImages = images.filter(img => img.id !== imageId);
+        const reorderedImages = remainingImages.map((img, index) => ({
+          ...img,
+          display_order: index + 1,
+          isMain: index === 0 && remainingImages.length > 0 ? true : (index === 0 ? false : img.isMain)
+        }));
+        
+        setImages(reorderedImages);
+        showNotification('รูปภาพถูกลบแล้ว', 'success');
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      showNotification('ไม่สามารถลบรูปภาพได้', 'error');
     }
-    showNotification('รูปภาพถูกลบแล้ว', 'success');
   };
 
+  // บันทึกลำดับรูปภาพ
   const handleSave = async () => {
-    setIsUploading(true);
+    setIsSaving(true);
     
     try {
-      // Simulate API calls
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Here you would make actual API calls to:
-      // 1. Upload new images
-      // 2. Update image orders
-      // 3. Set main image
-      
-      console.log('Saving images:', images);
-      showNotification('บันทึกสำเร็จ!', 'success');
-      
-      // Remove isNew flag from images
-      const savedImages = images.map(img => ({ ...img, isNew: false }));
-      setImages(savedImages);
+      // เตรียมข้อมูลลำดับรูปภาพ (ไม่รวมรูปที่กำลังอัปโหลด)
+      const imageOrders = images
+        .filter(img => !img.isUploading && img.id !== 'main')
+        .map(img => ({
+          imageId: img.id,
+          displayOrder: img.display_order
+        }));
+         console.log(imageOrders+"EGEKGOE")
+      // ส่งข้อมูลไปยัง API
+      const response = await fetch(`http://localhost:5000/api/images/reorder/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ imageOrders }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        showNotification('บันทึกลำดับรูปภาพสำเร็จ!', 'success');
+        // โหลดข้อมูลใหม่เพื่อให้แน่ใจว่าข้อมูลตรงกับฐานข้อมูล
+        await loadImages();
+      } else {
+        throw new Error(result.error);
+      }
       
     } catch (error) {
+      console.error('Save error:', error);
       showNotification('เกิดข้อผิดพลาดในการบันทึก', 'error');
     } finally {
-      setIsUploading(false);
+      setIsSaving(false);
     }
   };
 
+  // File drop handlers
   const handleDragEnter = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -235,7 +367,7 @@ const ProductImageManager = () => {
     e.stopPropagation();
   };
 
-  const handleFileDrop = (e) => {
+  const handleFileDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -243,23 +375,16 @@ const ProductImageManager = () => {
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     
     if (imageFiles.length > 0) {
-      setSelectedFiles(imageFiles);
-      imageFiles.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const newImage = {
-            id: Date.now() + Math.random(),
-            image_path: e.target.result,
-            display_order: images.length + 1,
-            isMain: images.length === 0,
-            file: file,
-            isNew: true
-          };
-          setImages(prev => [...prev, newImage]);
-        };
-        reader.readAsDataURL(file);
-      });
+      await handleFilesUpload(imageFiles);
     }
+  };
+
+  // สร้าง image URL
+  const getImageUrl = (imagePath) => {
+    if (imagePath.startsWith('blob:') || imagePath.startsWith('data:') || imagePath.startsWith('https')){
+      return imagePath;
+    }
+    return "https://cdn.toteja.co/"+imagePath;
   };
 
   return (
@@ -277,23 +402,24 @@ const ProductImageManager = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
+              disabled={isUploading}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/25 disabled:cursor-not-allowed"
             >
-              <Plus size={18} />
-              เพิ่มรูปภาพ
+              {isUploading ? <Loader size={18} className="animate-spin" /> : <Plus size={18} />}
+              {isUploading ? 'กำลังอัปโหลด...' : 'เพิ่มรูปภาพ'}
             </button>
             
             <button
               onClick={handleSave}
-              disabled={isUploading}
+              disabled={isSaving || isUploading}
               className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 rounded-xl transition-all duration-200 shadow-lg hover:shadow-green-500/25 disabled:cursor-not-allowed"
             >
-              {isUploading ? (
+              {isSaving ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Save size={18} />
               )}
-              {isUploading ? 'กำลังบันทึก...' : 'บันทึก'}
+              {isSaving ? 'กำลังบันทึก...' : 'บันทึกลำดับ'}
             </button>
           </div>
         </div>
@@ -327,9 +453,10 @@ const ProductImageManager = () => {
             <p className="text-gray-500 text-sm">หรือ</p>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="mt-2 px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl transition-colors"
+              disabled={isUploading}
+              className="mt-2 px-6 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 rounded-xl transition-colors disabled:cursor-not-allowed"
             >
-              เลือกไฟล์
+              {isUploading ? 'กำลังอัปโหลด...' : 'เลือกไฟล์'}
             </button>
           </div>
         </div>
@@ -340,19 +467,29 @@ const ProductImageManager = () => {
             {images.map((image, index) => (
               <div
                 key={image.id}
-                draggable
+                draggable={!image.isUploading}
                 onDragStart={(e) => handleDragStart(e, image)}
                 onDragOver={(e) => handleDragOver(e, image)}
                 onDrop={(e) => handleDrop(e, image)}
                 onDragEnd={handleDragEnd}
-                className={`relative group bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border-2 transition-all duration-300 cursor-move hover:shadow-2xl hover:shadow-blue-500/20 ${
+                className={`relative group bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
+                  image.isUploading ? 'cursor-not-allowed' : 'cursor-move'
+                } hover:shadow-2xl hover:shadow-blue-500/20 ${
                   dragOverItem?.id === image.id ? 'border-blue-500 scale-105' : 'border-gray-700'
                 } ${
                   image.isMain ? 'ring-2 ring-yellow-500/50' : ''
-                } ${
-                  image.isNew ? 'ring-2 ring-green-500/50' : ''
                 }`}
               >
+                {/* Loading Overlay */}
+                {image.isUploading && (
+                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex items-center justify-center">
+                    <div className="text-center">
+                      <Loader className="animate-spin mx-auto mb-2" size={24} />
+                      <p className="text-sm text-white">กำลังอัปโหลด...</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Main Image Badge */}
                 {image.isMain && (
                   <div className="absolute top-3 left-3 z-10 flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-semibold rounded-full shadow-lg">
@@ -361,27 +498,20 @@ const ProductImageManager = () => {
                   </div>
                 )}
 
-                {/* New Image Badge */}
-                {image.isNew && (
-                  <div className="absolute top-3 right-3 z-10 px-2 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-semibold rounded-full shadow-lg">
-                    ใหม่
-                  </div>
-                )}
-
                 {/* Order Number */}
                 <div className="absolute bottom-3 left-3 z-10 w-8 h-8 bg-gray-900/80 backdrop-blur-sm rounded-full flex items-center justify-center text-white font-bold text-sm border border-gray-600">
-                  {image.display_order}
+                  {index}
                 </div>
 
                 {/* Image */}
                 <div className="aspect-square relative overflow-hidden">
                   <img
-                    src={image.image_path}
+                    src={getImageUrl(image.image_path)}
                     alt={`Product image ${image.display_order}`}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/400x400/374151/9CA3AF?text=No+Image';
-                    }}
+                    // onError={(e) => {
+                    //   e.target.src = 'https://via.placeholder.com/400x400/374151/9CA3AF?text=No+Image';
+                    // }}
                   />
                   
                   {/* Overlay */}
@@ -389,63 +519,67 @@ const ProductImageManager = () => {
                 </div>
 
                 {/* Controls */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="flex items-center gap-2 bg-gray-900/90 backdrop-blur-sm rounded-xl p-2 shadow-lg border border-gray-700">
-                    {/* Move Up */}
-                    <button
-                      onClick={() => handleMoveUp(image.id)}
-                      disabled={index === 0}
-                      className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
-                      title="เลื่อนขึ้น"
-                    >
-                      <ArrowUp size={16} />
-                    </button>
-
-                    {/* Move Down */}
-                    <button
-                      onClick={() => handleMoveDown(image.id)}
-                      disabled={index === images.length - 1}
-                      className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
-                      title="เลื่อนลง"
-                    >
-                      <ArrowDown size={16} />
-                    </button>
-
-                    {/* Set as Main */}
-                    {!image.isMain && (
+                {!image.isUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="flex items-center gap-2 bg-gray-900/90 backdrop-blur-sm rounded-xl p-2 shadow-lg border border-gray-700">
+                      {/* Move Up */}
                       <button
-                        onClick={() => handleSetMain(image.id)}
-                        className="p-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-colors"
-                        title="ตั้งเป็นรูปหลัก"
+                        onClick={() => handleMoveUp(image.id)}
+                        disabled={index === 0}
+                        className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+                        title="เลื่อนขึ้น"
                       >
-                        <Star size={16} />
+                        <ArrowUp size={16} />
                       </button>
-                    )}
 
-                    {/* Preview */}
-                    <button
-                      onClick={() => setPreviewImage(image)}
-                      className="p-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
-                      title="ดูตัวอย่าง"
-                    >
-                      <Eye size={16} />
-                    </button>
+                      {/* Move Down */}
+                      <button
+                        onClick={() => handleMoveDown(image.id)}
+                        disabled={index === images.length - 1}
+                        className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+                        title="เลื่อนลง"
+                      >
+                        <ArrowDown size={16} />
+                      </button>
 
-                    {/* Delete */}
-                    <button
-                      onClick={() => handleDelete(image.id)}
-                      className="p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                      title="ลบรูปภาพ"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                      {/* Set as Main */}
+                      {!image.isMain && (
+                        <button
+                          onClick={() => handleSetMain(image.id)}
+                          className="p-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-colors"
+                          title="ตั้งเป็นรูปหลัก"
+                        >
+                          <Star size={16} />
+                        </button>
+                      )}
+
+                      {/* Preview */}
+                      <button
+                        onClick={() => setPreviewImage(image)}
+                        className="p-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                        title="ดูตัวอย่าง"
+                      >
+                        <Eye size={16} />
+                      </button>
+
+                      {/* Delete */}
+                      <button
+                        onClick={() => handleDelete(image.id)}
+                        className="p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                        title="ลบรูปภาพ"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Drag Handle */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                  <GripVertical size={24} className="text-white drop-shadow-lg" />
-                </div>
+                {!image.isUploading && (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                    <GripVertical size={24} className="text-white drop-shadow-lg" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -456,9 +590,10 @@ const ProductImageManager = () => {
             <p className="text-gray-500 mb-4">เริ่มเพิ่มรูปภาพสินค้าของคุณ</p>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl transition-all"
+              disabled={isUploading}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 rounded-xl transition-all disabled:cursor-not-allowed"
             >
-              เพิ่มรูปภาพแรก
+              {isUploading ? 'กำลังอัปโหลด...' : 'เพิ่มรูปภาพแรก'}
             </button>
           </div>
         )}
@@ -469,7 +604,7 @@ const ProductImageManager = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-400">
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-              <span>ลากและวางรูปภาพเพื่อเปลี่ยนลำดับ</span>
+              <span>ลากและวางรูปภาพเพื่ออัปโหลดและจัดเรียงลำดับ</span>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
@@ -477,11 +612,11 @@ const ProductImageManager = () => {
             </div>
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-              <span>รองรับไฟล์ JPG, PNG, WebP</span>
+              <span>รูปภาพจะถูกอัปโหลดทันทีเมื่อเลือก</span>
             </div>
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
-              <span>ขนาดไฟล์สูงสุด 5MB ต่อรูป</span>
+              <span>กดบันทึกเพื่อเซฟลำดับรูปภาพ</span>
             </div>
           </div>
         </div>
@@ -498,7 +633,7 @@ const ProductImageManager = () => {
               <X size={20} />
             </button>
             <img
-              src={previewImage.image_path}
+              src={getImageUrl(previewImage.image_path)}
               alt="Preview"
               className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
             />

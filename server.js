@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+app.use(express.json());
 const storeRouter = require('./routes/store');
 const worksRouter = require('./routes/work');
 const newsRouter = require('./routes/news');
@@ -9,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 app.use(cors({
    origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }));
 app.use(cookieParser());

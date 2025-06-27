@@ -94,9 +94,9 @@ const ProductShowcase = () => {
               src={product.image || product.image_Main_path }
               alt={product.name}
               className="w-full h-32 sm:h-40 object-cover rounded-xl"
-              onError={(e) => {
-                e.target.src = `https://via.placeholder.com/400x300/3b82f6/ffffff?text=${encodeURIComponent(product.name)}`;
-              }}
+              // onError={(e) => {
+              //   e.target.src = `https://via.placeholder.com/400x300/3b82f6/ffffff?text=${encodeURIComponent(product.name)}`;
+              // }}
             />
           </div>
           <button 

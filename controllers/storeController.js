@@ -2,6 +2,7 @@
 // const express = require('express');
 // const router = express.Router();
 const db = require('../db'); // สมมุติว่ามีโมดูล db สำหรับเชื่อมต่อฐานข้อมูล
+const ImageUrl = "https://cdn.toteja.co/"
 exports.getCategoriesWithProducts = async (req, res) => {
     try {
     // 1. ดึงหมวดหมู่ทั้งหมดก่อน
@@ -20,13 +21,20 @@ exports.getCategoriesWithProducts = async (req, res) => {
         ORDER BY RAND()
         LIMIT 8
       `, [cat.id]);
+      const product = products.map(product => ({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price).toLocaleString(), // ใส่ , คั่นหลักพัน
+      image: ImageUrl+product.image,
+      category: product.category
+    }));
 
       result.push({
         id: cat.id,
         name: cat.name,
         icon: cat.icon,
         gradient: cat.gradient,
-        products
+        products:product
       });
     }
 
@@ -102,7 +110,7 @@ exports.getSubCategorieswithProducts = async (req, res) => {
           price: row.price,
           rating: 5,
           reviews: 50,
-          image: row.image,
+          image: ImageUrl+row.image,
           category: row.category
         });
       }
@@ -290,7 +298,7 @@ exports.getProductsInSCategory = async (req, res) => {
         raw_price: row.raw_price,
         isNew: row.isNew === 1,
         tags,
-        image: row.image
+        image: ImageUrl+row.image
       };
     });
 
@@ -325,98 +333,6 @@ exports.getProductsInSCategory = async (req, res) => {
 };
 
 // ฟังก์ชันเดิมสำหรับดูรายละเอียดสินค้า (ปรับปรุงเล็กน้อย)
-exports.getProductDetail = async (req, res) => {
-  const productId = req.params.productId;
-  
-  try {
-    // 1. ดึงข้อมูลสินค้า + category/subcategory + images
-    const [rows] = await db.query(`
-      SELECT 
-        p.id,
-        p.name,
-        p.description,
-        p.created_at,
-        p.monthly_purchases,
-        p.total_purchases,
-        CONCAT('฿', FORMAT(p.price, 0)) AS price,
-        p.total_purchases AS sold,
-        c.name AS category,
-        s.name AS subcategory,
-        pi.image_path
-      FROM Products p
-      JOIN Categories c ON p.category_id = c.id
-      JOIN subcategories s ON p.subcategory_id = s.id
-      LEFT JOIN product_images pi ON p.id = pi.product_id
-      WHERE p.id = ?
-    `, [productId]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-
-    const row = rows[0];
-
-    // 2. ดึงยอดขายสูงสุดในระบบ
-    const [[maxPurchases]] = await db.query(`
-      SELECT 
-        MAX(monthly_purchases) AS max_monthly,
-        MAX(total_purchases) AS max_total
-      FROM Products
-    `);
-
-    // 3. ตรวจสอบเงื่อนไข tag
-    const tags = ["แนะนำ"];
-
-    const createdAt = new Date(row.created_at);
-    const now = new Date();
-    const oneWeekAgo = new Date(now);
-    oneWeekAgo.setDate(now.getDate() - 7);
-
-    if (createdAt >= oneWeekAgo) {
-      tags.push("ใหม่ล่าสุด");
-    }
-
-    if (row.monthly_purchases === maxPurchases.max_monthly) {
-      tags.push("ขายดี");
-    }
-
-    if (row.total_purchases === maxPurchases.max_total) {
-      tags.push("ยอดขายสูงสุด");
-    }
-
-    // 4. สร้าง object หลัก
-    const productData = {
-      id: row.id,
-      name: row.name,
-      price: row.price,
-      description: row.description,
-      sold: row.sold,
-      category: row.category,
-      subcategory: row.subcategory,
-      images: [],
-      tags
-    };
-
-    // รวมรูปภาพทั้งหมด
-    for (const r of rows) {
-      if (r.image_path) {
-        productData.images.push(r.image_path);
-      }
-    }
-
-    // ถ้าไม่มีรูปภาพ ให้ใส่รูป placeholder
-    if (productData.images.length === 0) {
-      productData.images = [`https://via.placeholder.com/400x300/6366f1/ffffff?text=${encodeURIComponent(productData.name)}`];
-    }
-
-    res.json(productData);
-    
-  } catch (error) {
-    console.error('Error fetching product:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
 // Route สำหรับ API (เพิ่มใน routes file)
 /*
 // routes/products.js หรือ routes/store.js
@@ -463,7 +379,7 @@ exports.getProductDetail = async (req, res) => {
       ORDER BY display_order ASC, created_at ASC; -- เรียงลำดับตาม display_order
     `, [productId]);
 
-    const subImages = subImageRows.map(row => row.image_path);
+    const subImages = subImageRows.map(row => ImageUrl+row.image_path);
 
     // 3. ดึงยอดขายสูงสุดในระบบ (ยังคงเหมือนเดิม)
     const [[maxPurchases]] = await db.query(`
@@ -509,7 +425,7 @@ exports.getProductDetail = async (req, res) => {
     // 6. รวมรูปภาพทั้งหมดเข้าด้วยกัน
     // เพิ่มรูปหลักก่อน
     if (product.image_Main_path) {
-      productData.images.push(product.image_Main_path);
+      productData.images.push(ImageUrl+product.image_Main_path);
     }
 
     // เพิ่มรูปภาพย่อย
@@ -547,7 +463,7 @@ exports.getNewProducts = async (req, res) => {
       id: product.id,
       name: product.name,
       price: Number(product.price).toLocaleString(), // ใส่ , คั่นหลักพัน
-      image: product.image,
+      image: ImageUrl+product.image,
       category: product.category
     }));
 
@@ -565,7 +481,7 @@ exports.getTopseller = async(req,res)=>{
     p.name,
     p.price,
     p.description,
-    p.image_Main_path,
+    p.image_Main_path AS image,
     p.monthly_purchases,
     p.total_purchases,
     c.name AS category,
@@ -576,8 +492,11 @@ exports.getTopseller = async(req,res)=>{
   ORDER BY p.total_purchases DESC
   LIMIT 8
 `);
-
-res.json(rows);
+  const updated = rows.map(item => ({
+    ...item,
+    image: `${ImageUrl}${item.image}`
+  }));
+res.json(updated);
 }
 exports.getRelatedP_detail = async(req,res)=>{
   const productId = req.params.productId;
@@ -597,36 +516,40 @@ const [related] = await db.query(`
   LIMIT 4
 `, [productId, productId]);
 
-res.json(related);
+  const updatedRelated = related.map(item => ({
+    ...item,
+    image: `${ImageUrl}${item.image}`
+  }));
+res.json(updatedRelated);
 }
 exports.getCategoriesName = async(req,res)=>{
      const [rows] = await db.query('SELECT id, name FROM Categories');
   res.json(rows);
 }
-exports.getNewProductsAll = async(req,res)=>{
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 12;
-  const categoryId = req.query.category;
+// exports.getNewProductsAll = async(req,res)=>{
+//   const page = parseInt(req.query.page) || 1;
+//   const limit = parseInt(req.query.limit) || 12;
+//   const categoryId = req.query.category;
 
-  const offset = (page - 1) * limit;
+//   const offset = (page - 1) * limit;
 
-  let query = `
-    SELECT id, name, 
-           CONCAT('฿', FORMAT(price, 0)) AS price, 
-           image_Main_path AS image
-    FROM Products
-    ${categoryId ? 'WHERE category_id = ?' : ''}
-    ORDER BY created_at DESC
-    LIMIT ? OFFSET ?
-  `;
+//   let query = `
+//     SELECT id, name, 
+//            CONCAT('฿', FORMAT(price, 0)) AS price, 
+//            image_Main_path AS image
+//     FROM Products
+//     ${categoryId ? 'WHERE category_id = ?' : ''}
+//     ORDER BY created_at DESC
+//     LIMIT ? OFFSET ?
+//   `;
 
-  try {
-    const [rows] = await db.query(query, categoryId ? [categoryId, limit, offset] : [limit, offset]);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Server Error', error: err });
-  }
-}
+//   try {
+//     const [rows] = await db.query(query, categoryId ? [categoryId, limit, offset] : [limit, offset]);
+//     res.json(rows);
+//   } catch (err) {
+//     res.status(500).json({ message: 'Server Error', error: err });
+//   }
+// }
 exports.getCatagoriesHome = async(req,res)=>{
   const [rows] = await db.query(`
   SELECT 

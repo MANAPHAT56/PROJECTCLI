@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Plus,
@@ -28,6 +29,7 @@ import {
 } from 'lucide-react';
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [currentView, setCurrentView] = useState('products'); // products, categories, subcategories, dashboard
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -42,7 +44,12 @@ const AdminDashboard = () => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [pagination, setPagination] = useState({});
   const limit = 12;
-
+ const navigateToProductsImage = (productId) => {
+    // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
+    // ในระบบจริงจะเป็นแบบนี้:
+    navigate(`/images/${productId}`);
+    // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
+  };
   // Form states
   const [formData, setFormData] = useState({
     name: '',
@@ -103,6 +110,7 @@ const AdminDashboard = () => {
     
     if (item && type === 'edit') {
       setFormData({
+        id: item.id || '',
         name: item.name || '',
         price: item.price || '',
         description: item.description || '',
@@ -150,7 +158,7 @@ const AdminDashboard = () => {
     if (modalType === 'add') {
       const newItem = {
         ...formData,
-        id: Date.now(),
+        id: null,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         category_id: parseInt(formData.category_id),
@@ -668,6 +676,7 @@ const AdminDashboard = () => {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  
                   <label className="block text-sm font-medium text-gray-300 mb-1">ชื่อสินค้า</label>
                   <input
                     type="text"
@@ -747,20 +756,23 @@ const AdminDashboard = () => {
           type="button"
           onClick={() => {
             // เก็บข้อมูลแบบฟอร์มชั่วคราวก่อนไปหน้าจัดการรูปภาพ
-            localStorage.setItem('productFormDraft', JSON.stringify(formData));
-            window.location.href = `http://localhost:5000/api/images/${selectedItem?.id} || 'new'}/images`;
+            // localStorage.setItem('productFormDraft', JSON.stringify(formData));
+            navigateToProductsImage(formData.id);
+            
           }}
-          className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2"
-        >
+          className="mt-2 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2"
+        > 
           <ImageIcon size={16} />
           จัดการรูปภาพสินค้า
+          
         </button>
+        
       </div>
               </div>
               
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">รูปภาพรอง</label>
-                <div className="flex items-center gap-2">
+              <div>
+                {/* <label className="block text-sm font-medium text-gray-300 mb-1">รูปภาพหลัก</label> */}
+                {/* <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={formData.image_Sub_path}
@@ -771,9 +783,9 @@ const AdminDashboard = () => {
                   <button className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-gray-300">
                     <Upload size={16} />
                   </button>
-                </div>
+                </div> */}
 
-              </div> */}
+              </div>
             </>
           );
         case 'categories':
