@@ -31,9 +31,19 @@ res.json({
  
 }
 exports.InsertNewProducts = async(req,res)=>{
-  const {newProductData} = req.boduy;
-  
+  const productData = req.body;
+   // Validate numeric fields
+  productData.price = parseFloat(productData.price);
+  productData.stock = parseInt(productData.stock);
+  productData.category_id = parseInt(productData.category_id);
+  productData.subcategory_id = parseInt(productData.subcategory_id);
+  productData.total_purchases = parseInt(productData.total_purchases || 0);
+  productData.monthly_purchases = parseInt(productData.monthly_purchases || 0);
+    if (isNaN(productData.stock)) {
+    productData.stock=0;
+  }
   const query =    ` INSERT INTO Products (
+       
         name,
         price,
         description,
@@ -44,29 +54,43 @@ exports.InsertNewProducts = async(req,res)=>{
         monthly_purchases,
         stock
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
-     const values = [
-    newProductData.name,
-    newProductData.price,
-    newProductData.description,
-    newProductData.image_Main_path,
-    newProductData.category_id,
-    newProductData.subcategory_id,
-    newProductData.total_purchases,
-    newProductData.monthly_purchases,
-    newProductData.stock
+  const values = [
+    productData.name,
+    productData.price,
+     productData.description,
+    productData.image_Main_path,
+    productData.category_id,
+    productData.subcategory_id,
+     productData.total_purchases,
+     productData.monthly_purchases,
+   productData.stock
 ];
+
 
      try {
     const [rows] = await db.query(query, values);
     console.log('Product inserted with ID:', rows.insertId);
+    const newProductId = rows.insertId; 
+            res.json({ productId: newProductId });
 } catch (error) {
     console.error('Error inserting product:', error);
 }
 }
 
 exports.EditProducts = async(req,res)=>{
-  const {newProductData}= req.body;
   const {productId} = req.params;
+    const productData = req.body;
+
+  // Validate numeric fields
+  productData.price = parseFloat(productData.price);
+  productData.stock = parseInt(productData.stock);
+  productData.category_id = parseInt(productData.category_id);
+  productData.subcategory_id = parseInt(productData.subcategory_id);
+  productData.total_purchases = parseInt(productData.total_purchases || 0);
+  productData.monthly_purchases = parseInt(productData.monthly_purchases || 0);
+    if (isNaN(productData.stock)) {
+    productData.stock=0;
+  }
      const query = `
    UPDATE Products
 SET
@@ -84,15 +108,15 @@ WHERE
 `;
 
 const values = [
-    newProductData.name,
-    newProductData.price,
-    newProductData.description,
-    newProductData.image_Main_path,
-    newProductData.category_id,
-    newProductData.subcategory_id,
-    newProductData.total_purchases,
-    newProductData.monthly_purchases,
-    newProductData.stock,
+    productData.name,
+    productData.price,
+     productData.description,
+    productData.image_Main_path,
+    productData.category_id,
+    productData.subcategory_id,
+     productData.total_purchases,
+     productData.monthly_purchases,
+   productData.stock,
     productId
 ];
 
@@ -103,6 +127,7 @@ try {
 } catch (error) {
     console.error('Error inserting product:', error);
 }
+res.json({success:true})
 }
 //catogories
 exports.getCategories=async (req,res)=>{

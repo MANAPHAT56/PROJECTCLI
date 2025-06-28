@@ -4,5 +4,6 @@ const Admincontroller = require('../controllers/adminController');
 router.get("/products",Admincontroller.getProducts);
 router.get("/categories",Admincontroller.getCategories);
 router.get("/subcategories",Admincontroller.getSubCategories);
-router.put("/:productId",Admincontroller.EditProducts);
+router.put("/edit/:productId",Admincontroller.EditProducts);
+router.post("/new",Admincontroller.InsertNewProducts);
 module.exports = router;

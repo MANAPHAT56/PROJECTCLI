@@ -43,6 +43,7 @@ const AdminDashboard = () => {
   const [gridView, setGridView] = useState(true);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [pagination, setPagination] = useState({});
+    let newProductId;
   const limit = 12;
  const navigateToProductsImage = (productId) => {
     // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
@@ -156,20 +157,58 @@ const AdminDashboard = () => {
     e.preventDefault();
     
     if (modalType === 'add') {
-      const newItem = {
-        ...formData,
-        id: null,
+      
+                 const newProductData = {
+                  id : null,
+        // We're sending all form data, but explicitly ensuring numbers are numbers
+        name: formData.name, // Assuming 'name' is also in formData
+        description: formData.description, // Assuming 'description' is also in formData
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
         category_id: parseInt(formData.category_id),
-        subcategory_id: parseInt(formData.subcategory_id),
-        total_purchases: 0,
-        monthly_purchases: 0,
-        created_at: new Date().toISOString().split('T')[0]
+        subcategory_id: parseInt(formData.subcategory_id) ,
+        image_Main_path : formData.image_Main_path,
+        total_purchases : 0,
+        monthly_purchases : 0,
+          created_at: new Date().toISOString().split('T')[0]
+        
       };
       
+    try {
+          console.log(newProductData)
+        const response = await fetch(`http://localhost:5000/api/admin/new`, {
+            method: 'POST', // Use PUT for updating an existing resource
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
+            },
+            body: JSON.stringify(newProductData) // Send the prepared data as JSON
+        });
+
+        // if (!response.ok) {
+        //     // If the server response is not OK (e.g., 400, 500 status)
+        //     const errorData = await response.json();
+            
+        //     throw new Error(errorData.message || 'Failed to update product on server.');
+        // }
+       
+        // console.log('Product update successful:', result);
+           
+        // If the API call is successful, then update the local state.
+        // // This ensures your UI reflects what's now in the databas  e.
+        //  console.log(response.json().productId+"newProdcutId data");
+        const productId = await response.json();
+           newProductId= productId.productId;
+          //  console.log(newProductId.productId+"newProdcutId data");
+    } catch (error) {
+        console.error('Error updating product:', error);
+    }         
       if (currentView === 'products') {
-        setProducts([...products, newItem]);
+           setProducts(products => [...products, {
+      ...newProductData,
+      id: newProductId // ใช้ ID จาก server หรือสร้างชั่วคราว
+    }]);
+        console.log(products)
       } else if (currentView === 'categories') {
         const newCategory = {
           ...formData,
@@ -180,18 +219,18 @@ const AdminDashboard = () => {
       }
     } else if (modalType === 'edit') {
       if (currentView === 'products') {
-        // setProducts(products.map(p => 
-        //   p.id === selectedItem.id 
-        //     ? { 
-        //         ...p, 
-        //         ...formData,
-        //         price: parseFloat(formData.price),
-        //         stock: parseInt(formData.stock),
-        //         category_id: parseInt(formData.category_id),
-        //         subcategory_id: parseInt(formData.subcategory_id)
-        //       }
-        //     : p
-        // ));
+        setProducts(products.map(p => 
+          p.id === selectedItem.id 
+            ? { 
+                ...p, 
+                ...formData,
+                price: parseFloat(formData.price),
+                stock: parseInt(formData.stock),
+                category_id: parseInt(formData.category_id),
+                subcategory_id: parseInt(formData.subcategory_id)
+              }
+            : p
+        ));
           const newProductData = {
             id:selectedItem.id,
         // We're sending all form data, but explicitly ensuring numbers are numbers
@@ -201,14 +240,16 @@ const AdminDashboard = () => {
         stock: parseInt(formData.stock),
         category_id: parseInt(formData.category_id),
         subcategory_id: parseInt(formData.subcategory_id) ,
-        image_Main_path : "/",
+        image_Main_path : formData.image_Main_path,
             total_purchases : 0,
         monthly_purchases : 0
         
       };
+
         // Add any other fields from formData that your product table expects
         try {
-        const response = await fetch(`http://localhost:5000/api/admin/${selectedItem.id}`, {
+          console.log(newProductData)
+        const response = await fetch(`http://localhost:5000/api/admin/edit/${selectedItem.id}`, {
             method: 'PUT', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
@@ -223,38 +264,34 @@ const AdminDashboard = () => {
             throw new Error(errorData.message || 'Failed to update product on server.');
         }
 
-        const result = await response.json();
-        console.log('Product update successful:', result);
+        // const result = await response.json();
+        // console.log('Product update successful:', result);
 
         // If the API call is successful, then update the local state.
         // This ensures your UI reflects what's now in the database.
-        setProducts(products.map(p =>
-            p.id === selectedItem.id
-                ? {
-                    ...p, // Keep existing product properties
-                    ...newProductData// Apply the newly updated data
-                }
-                : p
-        ));
-
-        showNotification('บันทึกการแก้ไขสินค้าสำเร็จ!', 'success');
+        // setProducts(products.map(p =>
+        //     p.id === selectedItem.id
+        //         ? {
+        //             ...p, // Keep existing product properties
+        //             ...newProductData// Apply the newly updated data
+        //         }
+        //         : p
+        // ));
 
     } catch (error) {
         console.error('Error updating product:', error);
-        showNotification(`ไม่สามารถบันทึกการแก้ไขสินค้าได้: ${error.message}`, 'error');
     }
-    };
-
-      } else if (currentView === 'categories') {
+  }
+   else if (currentView === 'categories') {
         setCategories(categories.map(c => 
           c.id === selectedItem.id ? { ...c, ...formData } : c
         ));
       }
+      } 
+         closeModal();
     }
     
-    closeModal();
-  };
-
+ 
   const handleDelete = () => {
     if (currentView === 'products') {
       setProducts(products.filter(p => p.id !== selectedItem.id));
@@ -822,7 +859,6 @@ const AdminDashboard = () => {
         > 
           <ImageIcon size={16} />
           จัดการรูปภาพสินค้า
-          
         </button>
         
       </div>
@@ -996,7 +1032,7 @@ const AdminDashboard = () => {
       </div>
     );
   };
-  
+
   // Main render
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex">
@@ -1016,7 +1052,6 @@ const AdminDashboard = () => {
       <Modal />
     </div>
   );
-
 };
-
 export default AdminDashboard;
+
