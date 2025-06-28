@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+
 import { 
   Plus,
   Search,
@@ -29,6 +30,11 @@ import {
 } from 'lucide-react';
 
 const AdminDashboard = () => {
+  const descriptionRef = useRef();
+  const nameRef = useRef();
+  const priceRef = useRef();
+   const stockRef = useRef();
+  const [currentlyFocusedField, setCurrentlyFocusedField] = useState('name');
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState('products'); // products, categories, subcategories, dashboard
   const [products, setProducts] = useState([]);
@@ -61,12 +67,32 @@ const AdminDashboard = () => {
     stock: '',
     image_Main_path: '',
     image_Sub_path: ''
-  });
-
-
-
+  },[currentPage]);
+ console.log("reloadunderFormdata")
   // Mock data
-
+useEffect(() => {
+  if (currentlyFocusedField === 'description' && descriptionRef.current) {
+    const el = descriptionRef.current;
+    el.focus();
+    const length = el.value.length;
+    el.setSelectionRange(length, length);
+  } else if (currentlyFocusedField === 'name' && nameRef.current) {
+    const el = nameRef.current;
+    el.focus();
+    const length = el.value.length;
+    el.setSelectionRange(length, length);
+  }else if(currentlyFocusedField === 'price' && priceRef.current){
+      const el = priceRef.current;
+       el.focus();
+    const length = el.value.length;
+    el.setSelectionRange(length, length);
+  }else if(currentlyFocusedField === 'stock' && stockRef.current){
+      const el = stockRef.current;
+       el.focus();
+    const length = el.value.length;
+    el.setSelectionRange(length, length);
+  }
+}, [formData, currentlyFocusedField]);
  useEffect(() => {
     axios.get(`http://localhost:5000/api/admin/products?page=${currentPage}&limit=${limit}`).then((res) => {
       setProducts(res.data.data);
@@ -85,17 +111,7 @@ const AdminDashboard = () => {
       console.log("SubCa"+res.data.subcategories)
     });
   }, []);
-//   const filteredProducts = products.filter(product => {
-//     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-//     const matchesCategory = selectedCategory === 'all' || product.category_id === parseInt(selectedCategory);
-//     return matchesSearch && matchesCategory;
-//   });
 
-//   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-//   const currentProducts = filteredProducts.slice(
-//     (currentPage - 1) * itemsPerPage,
-//     currentPage * itemsPerPage
-//   );
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('th-TH').format(price);
@@ -106,10 +122,12 @@ const AdminDashboard = () => {
   };
 
   const handleModal = (type, item = null) => {
+     console.log("reloadHandlemodal")
     setModalType(type);
     setSelectedItem(item);
-    
+      setShowModal(true);
     if (item && type === 'edit') {
+       console.log("reloadSetformdata")
       setFormData({
         id: item.id || '',
         name: item.name || '',
@@ -134,7 +152,6 @@ const AdminDashboard = () => {
       });
     }
     
-    setShowModal(true);
   };
 
   const closeModal = () => {
@@ -775,8 +792,13 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-1">ชื่อสินค้า</label>
                   <input
                     type="text"
+                      ref={nameRef}
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                     onFocus={() => setCurrentlyFocusedField('name')}
+                    onChange={(e) => setFormData(prev => ({
+  ...prev,
+  name: e.target.value
+}))}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                     placeholder="ชื่อสินค้า"
                   />
@@ -784,9 +806,14 @@ const AdminDashboard = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">ราคา</label>
                   <input
-                    type="number"
+                  ref = {priceRef}
+                    type="text"
                     value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                      onFocus={() => setCurrentlyFocusedField('price')}
+                      onChange={(e) => setFormData(prev => ({
+  ...prev,
+  price: e.target.value
+}))}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                     placeholder="ราคา"
                   />
@@ -796,8 +823,13 @@ const AdminDashboard = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">คำอธิบาย</label>
                 <textarea
+                           onFocus={() => setCurrentlyFocusedField('description')}
+                  ref={descriptionRef}
                   value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                   onChange={(e) => setFormData(prev => ({
+  ...prev,
+  description: e.target.value
+}))}
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                   placeholder="คำอธิบายสินค้า"
                   rows={3}
@@ -809,7 +841,10 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-1">หมวดหมู่หลัก</label>
                   <select
                     value={formData.category_id}
-                    onChange={(e) => setFormData({...formData, category_id: e.target.value})}
+               onChange={(e) => setFormData(prev => ({
+  ...prev,
+  category_id: e.target.value
+}))}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                   >
                     <option value="">เลือกหมวดหมู่</option>
@@ -822,7 +857,10 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-1">หมวดหมู่ย่อย</label>
                   <select
                     value={formData.subcategory_id}
-                    onChange={(e) => setFormData({...formData, subcategory_id: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({
+  ...prev,
+  subcategory_id: e.target.value
+}))}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                   >
                     <option value="">เลือกหมวดหมู่ย่อย</option>
@@ -839,9 +877,14 @@ const AdminDashboard = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">จำนวนสต็อก</label>
                   <input
-                    type="number"
+                        onFocus={() => setCurrentlyFocusedField('stock')}
+                    type="text"
+                    ref = {stockRef}
                     value={formData.stock}
-                    onChange={(e) => setFormData({...formData, stock: e.target.value})}
+                    onChange={(e) => setFormData(prev => ({
+  ...prev,
+  stock: e.target.value
+}))}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                     placeholder="จำนวนสต็อก"
                   />
@@ -888,9 +931,13 @@ const AdminDashboard = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">ชื่อหมวดหมู่</label>
                 <input
+                  ref={nameRef}
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) => setFormData(prev => ({
+  ...prev,
+  name: e.target.value
+}))}
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                   placeholder="ชื่อหมวดหมู่"
                 />
@@ -900,7 +947,10 @@ const AdminDashboard = () => {
                 <input
                   type="text"
                   value={formData.icon}
-                  onChange={(e) => setFormData({...formData, icon: e.target.value})}
+                 onChange={(e) => setFormData(prev => ({
+  ...prev,
+  icon: e.target.value
+}))}
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                   placeholder="ชื่อไอคอน (เช่น 'Monitor')"
                 />
@@ -911,7 +961,10 @@ const AdminDashboard = () => {
                   <input
                     type="text"
                     value={formData.image_path}
-                    onChange={(e) => setFormData({...formData, image_path: e.target.value})}
+                     onChange={(e) => setFormData(prev => ({
+  ...prev,
+  image_path: e.target.value
+}))}
                     className="flex-1 px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                     placeholder="URL รูปภาพ"
                   />
@@ -928,9 +981,13 @@ const AdminDashboard = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">ชื่อหมวดหมู่ย่อย</label>
                 <input
+                  ref={nameRef}
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                 onChange={(e) => setFormData(prev => ({
+  ...prev,
+  name: e.target.value
+}))}
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                   placeholder="ชื่อหมวดหมู่ย่อย"
                 />
@@ -939,7 +996,10 @@ const AdminDashboard = () => {
                 <label className="block text-sm font-medium text-gray-300 mb-1">หมวดหมู่หลัก</label>
                 <select
                   value={formData.category_id}
-                  onChange={(e) => setFormData({...formData, category_id: e.target.value})}
+                 onChange={(e) => setFormData(prev => ({
+  ...prev,
+  category_id: e.target.value
+}))}
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                 >
                   <option value="">เลือกหมวดหมู่หลัก</option>
@@ -953,7 +1013,10 @@ const AdminDashboard = () => {
                 <input
                   type="text"
                   value={formData.icon}
-                  onChange={(e) => setFormData({...formData, icon: e.target.value})}
+                   onChange={(e) => setFormData(prev => ({
+  ...prev,
+  icon: e.target.value
+}))}
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
                   placeholder="ชื่อไอคอน (เช่น 'Smartphone')"
                 />
