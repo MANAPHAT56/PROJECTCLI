@@ -30,6 +30,80 @@ res.json({
   }});
  
 }
+exports.InsertNewProducts = async(req,res)=>{
+  const {newProductData} = req.boduy;
+  
+  const query =    ` INSERT INTO Products (
+        name,
+        price,
+        description,
+        image_Main_path,
+        category_id,
+        subcategory_id,
+        total_purchases,
+        monthly_purchases,
+        stock
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
+     const values = [
+    newProductData.name,
+    newProductData.price,
+    newProductData.description,
+    newProductData.image_Main_path,
+    newProductData.category_id,
+    newProductData.subcategory_id,
+    newProductData.total_purchases,
+    newProductData.monthly_purchases,
+    newProductData.stock
+];
+
+     try {
+    const [rows] = await db.query(query, values);
+    console.log('Product inserted with ID:', rows.insertId);
+} catch (error) {
+    console.error('Error inserting product:', error);
+}
+}
+
+exports.EditProducts = async(req,res)=>{
+  const {newProductData}= req.body;
+  const {productId} = req.params;
+     const query = `
+   UPDATE Products
+SET
+    name = ?,
+    price = ?,
+    description = ?,
+    image_Main_path = ?,
+    category_id = ?,
+    subcategory_id = ?,
+    total_purchases = ?,
+    monthly_purchases = ?,
+    stock = ?
+WHERE
+    id = ?; 
+`;
+
+const values = [
+    newProductData.name,
+    newProductData.price,
+    newProductData.description,
+    newProductData.image_Main_path,
+    newProductData.category_id,
+    newProductData.subcategory_id,
+    newProductData.total_purchases,
+    newProductData.monthly_purchases,
+    newProductData.stock,
+    productId
+];
+
+// Assuming 'db' is your database connection pool
+try {
+    const [rows] = await db.query(query, values);
+    console.log('Product inserted with ID:', rows.insertId);
+} catch (error) {
+    console.error('Error inserting product:', error);
+}
+}
 //catogories
 exports.getCategories=async (req,res)=>{
     const [categories] =await db.query( `SELECT 

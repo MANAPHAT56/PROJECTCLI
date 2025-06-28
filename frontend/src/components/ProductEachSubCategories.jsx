@@ -90,7 +90,7 @@ const ProductShowcase = () => {
             <img
               src={product.image}
               alt={product.name}
-              className="w-full h-32 object-cover rounded-lg shadow-md"
+              className="w-full h-48 object-cover rounded-lg shadow-md"
               onError={(e) => {
                 e.target.src = `https://via.placeholder.com/400x300/8b5cf6/ffffff?text=${encodeURIComponent(product.name)}`;
               }}

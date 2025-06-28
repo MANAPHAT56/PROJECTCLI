@@ -152,7 +152,7 @@ const AdminDashboard = () => {
     });
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     
     if (modalType === 'add') {
@@ -180,18 +180,71 @@ const AdminDashboard = () => {
       }
     } else if (modalType === 'edit') {
       if (currentView === 'products') {
-        setProducts(products.map(p => 
-          p.id === selectedItem.id 
-            ? { 
-                ...p, 
-                ...formData,
-                price: parseFloat(formData.price),
-                stock: parseInt(formData.stock),
-                category_id: parseInt(formData.category_id),
-                subcategory_id: parseInt(formData.subcategory_id)
-              }
-            : p
+        // setProducts(products.map(p => 
+        //   p.id === selectedItem.id 
+        //     ? { 
+        //         ...p, 
+        //         ...formData,
+        //         price: parseFloat(formData.price),
+        //         stock: parseInt(formData.stock),
+        //         category_id: parseInt(formData.category_id),
+        //         subcategory_id: parseInt(formData.subcategory_id)
+        //       }
+        //     : p
+        // ));
+          const newProductData = {
+            id:selectedItem.id,
+        // We're sending all form data, but explicitly ensuring numbers are numbers
+        name: formData.name, // Assuming 'name' is also in formData
+        description: formData.description, // Assuming 'description' is also in formData
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        category_id: parseInt(formData.category_id),
+        subcategory_id: parseInt(formData.subcategory_id) ,
+        image_Main_path : "/",
+            total_purchases : 0,
+        monthly_purchases : 0
+        
+      };
+        // Add any other fields from formData that your product table expects
+        try {
+        const response = await fetch(`http://localhost:5000/api/admin/${selectedItem.id}`, {
+            method: 'PUT', // Use PUT for updating an existing resource
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
+            },
+            body: JSON.stringify(newProductData), // Send the prepared data as JSON
+        });
+
+        if (!response.ok) {
+            // If the server response is not OK (e.g., 400, 500 status)
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update product on server.');
+        }
+
+        const result = await response.json();
+        console.log('Product update successful:', result);
+
+        // If the API call is successful, then update the local state.
+        // This ensures your UI reflects what's now in the database.
+        setProducts(products.map(p =>
+            p.id === selectedItem.id
+                ? {
+                    ...p, // Keep existing product properties
+                    ...newProductData// Apply the newly updated data
+                }
+                : p
         ));
+
+        showNotification('บันทึกการแก้ไขสินค้าสำเร็จ!', 'success');
+
+    } catch (error) {
+        console.error('Error updating product:', error);
+        showNotification(`ไม่สามารถบันทึกการแก้ไขสินค้าได้: ${error.message}`, 'error');
+    }
+    };
+
       } else if (currentView === 'categories') {
         setCategories(categories.map(c => 
           c.id === selectedItem.id ? { ...c, ...formData } : c
@@ -424,10 +477,15 @@ const AdminDashboard = () => {
           {products.map((product) => (
             <div key={product.id} className="bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-700 hover:border-blue-500/50 transition-all group">
               <div className="relative">
-                <div className="w-full h-48 bg-gray-800 flex items-center justify-center">
-                  {/* <ImageIcon size={32} className="text-gray-600" /> */}
-                  <img src={product.image_Main_path} alt="" />
-                </div>
+              <div className="w-full h-48 bg-gray-800 flex items-center justify-center overflow-hidden">
+  <div className="max-w-full max-h-full">
+    <img 
+      src={"https://cdn.toteja.co/" + product.image_Main_path} 
+      alt={product.name} 
+      className="w-full h-full object-contain" 
+    />
+  </div>
+</div>
                 
                 <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button

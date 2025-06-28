@@ -200,6 +200,7 @@ const ProductImageManager = () => {
       e.preventDefault();
       return;
     }
+    console.log("item")
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -270,15 +271,66 @@ const ProductImageManager = () => {
     setImages(updatedImages);
   };
 
-  const handleSetMain = (imageId) => {
-    const updatedImages = images.map(img => ({
+  const handleSetMain = async (imageId) => {
+     const currentMainImage = images.find(img => img.isMain);
+     console.log("Oldmain"+currentMainImage);
+     const updatedImages = images.map(img => ({
       ...img,
       isMain: img.id === imageId
     }));
-    setImages(updatedImages);
-    showNotification('รูปภาพหลักถูกเปลี่ยนแล้ว');
-  };
+    setImages(updatedImages); 
+    showNotification('กำลังเปลี่ยนรูปภาพหลัก...'); // Inform the user
+    try {
+        // Step 1: If there was a previous main image AND it's different from the new one,
+        // send an API request to unset its 'is_main_image' status in the database.
+        if (currentMainImage && currentMainImage.id !== imageId) {
+            console.log(`Unsetting old main image: ${currentMainImage.id}`);
+            const response = await fetch(
+                `http://localhost:5000/api/images/${productId}/set-main`,
+                {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageId: currentMainImage.id, isMain: false }),
+                }
+            );
 
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to unset previous main image.');
+            }
+        }
+
+        // Step 2: Send an API request to set the newly selected image as 'is_main_image = true'
+        // This also handles updating the `image_Main_path` in the `Products` table on the backend.
+        console.log(`Setting new main image: ${imageId}`);
+        const response = await fetch(
+            `http://localhost:5000/api/images/${productId}/set-main`,
+            {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageId: imageId, isMain: true }),
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to set new main image.');
+        }
+
+        // If both API calls succeed, show a success notification.
+        // It's good practice to re-load images to ensure perfect sync with the database,
+        // especially if backend logic handles more complex scenarios.
+        await loadImages(); // Call loadImages to fetch the latest state from the server
+        showNotification('รูปภาพหลักถูกเปลี่ยนสำเร็จแล้ว!', 'success');
+    } catch (error) {
+        console.error('Error setting main image:', error);
+        showNotification(`ไม่สามารถเปลี่ยนรูปภาพหลักได้: ${error.message}`, 'error');
+
+        // If an error occurs, revert the UI to its state before the optimistic update
+        // This makes the UI consistent with the backend if the operation failed.
+        await loadImages(); // Re-fetch the correct state from the server
+    }
+};
   // ลบรูปภาพ
   const handleDelete = async (imageId) => {
     try {

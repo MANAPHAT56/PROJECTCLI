@@ -31,5 +31,5 @@ router.delete('/delete/:category/:subcategory/:productId/:imageId',
 router.get('/view/:imagePath',
   imageController.viewImage
 );
-
+router.put('/:productId/set-main',imageController.SetmainImage);
 module.exports = router;

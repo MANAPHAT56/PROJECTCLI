@@ -240,3 +240,68 @@ exports.viewImage = async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to retrieve image' });
   }
 };
+exports.SetmainImage = async(req,res)=>{
+    const { productId } = req.params;
+    const { imageId, isMain } = req.body; // imageId is the ID of the product_image, isMain is boolean
+
+    try {
+        if (isMain === true) {
+            // --- Logic when setting an image as the main one (isMain = true) ---
+
+            // 1. Get the path of the image being set as main
+            const [imageRows] = await db.query(
+                'SELECT image_path FROM product_images WHERE id = ? AND product_id = ?',
+                [imageId, productId]
+            );
+
+            if (imageRows.length === 0) {
+                return res.status(404).json({ success: false, error: 'Image not found for this product.' });
+            }
+            const newMainImagePath = imageRows[0].image_path;
+
+            // 3. Set the specified image to is_main_image = TRUE
+            await db.query(
+                'UPDATE product_images SET is_main_image = TRUE WHERE id = ? AND product_id = ?',
+                [imageId, productId]
+            );
+
+            // 4. Update the image_Main_path in the Products table
+            await db.query(
+                'UPDATE Products SET image_Main_path = ? WHERE id = ?',
+                [newMainImagePath, productId]
+            );
+            res.json( {success: true});
+        } else if (isMain === false) {
+            // --- Logic when unsetting an image (isMain = false) ---
+            // This scenario typically happens if you're removing the *current* main image,
+            // or if the frontend explicitly sends isMain: false for an image.
+            // If the goal is truly to "unset" without immediately replacing,
+            // you might need additional logic (e.g., set image_Main_path to NULL or a default).
+            // For now, we'll just update product_images.
+
+            // 1. Set the specified image to is_main_image = FALSE
+            await db.query(
+                'UPDATE product_images SET is_main_image = FALSE WHERE id = ? AND product_id = ?',
+                [imageId, productId]
+            );
+
+            // IMPORTANT CONSIDERATION:
+            // If the image being unset was the main product image (image_Main_path in Products),
+            // you might want to clear that path or set it to a default.
+            // For simplicity, this example doesn't automatically clear Products.image_Main_path
+            // if you unset an image as "main" without setting another.
+            // This would usually be handled by setting a *new* main image immediately.
+            // If you intend to *remove* the main image status without a replacement,
+            // you'd add:
+            // await connection.query('UPDATE Products SET image_Main_path = NULL WHERE id = ? AND image_Main_path = ?', [productId, /* old main image path */]);
+            // This requires knowing the old main image's path or checking if it was the one.
+        } else {
+            return res.status(400).json({ success: false, error: 'Invalid value for isMain. Must be true or false.' });
+        }
+        res.json({ success: true, message: `Image ${imageId} isMain status updated for product ${productId}.` });
+
+    } catch (error) {
+        console.error('Error in set-main API:', error);
+        res.status(500).json({ success: false, error: 'Internal server error.' });
+    } 
+  }

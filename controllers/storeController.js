@@ -375,7 +375,7 @@ exports.getProductDetail = async (req, res) => {
     const [subImageRows] = await db.query(`
       SELECT image_path
       FROM product_images
-      WHERE product_id = ?
+      WHERE product_id = ? AND is_main_image = false
       ORDER BY display_order ASC, created_at ASC; -- เรียงลำดับตาม display_order
     `, [productId]);
 
