@@ -1,48 +1,69 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ShoppingCart, Heart, Star, Eye, Plus } from 'lucide-react';
+import { ChevronRight, ShoppingCart, Heart, Star, Eye, Plus, Loader } from 'lucide-react'; // Import Loader icon
 import { useNavigate } from 'react-router-dom';
+import Footer from './footer';
+
 const ProductShowcase = () => {
   const navigate = useNavigate();
   const [visibleProducts, setVisibleProducts] = useState({});
-    const [favorites, setFavorites] = useState(new Set());
+  const [favorites, setFavorites] = useState(new Set());
   const [animatedCards, setAnimatedCards] = useState(new Set());
-   const [categories, setCategories] = useState([]);
-   useEffect(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-  fetch('http://localhost:5000/api/store/categories/')
-    .then(res => res.json())
-    .then(data => setCategories(data))
-    .catch(err => console.error('Error fetching categories:', err));
-}, []);
-  // Initialize visible products (show 4 products per category initially)
-  useEffect(() => {
-    const initial = {};
-    Object.keys(categories).forEach(category => {
-      initial[category] = 4;
-    });
-    setVisibleProducts(initial);
-  }, [ categories]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true); // Add loading state
 
-  // Animate cards on load
   useEffect(() => {
-    console.log('📦 categories animation card:', categories); // เพิ่มตรงนี้
-    const timer = setTimeout(() => {
-      const allProductIds = Object.values(categories).flatMap(cat => 
-        cat.products.slice(0, 4).map(p => p.id)
-      );
-      setAnimatedCards(new Set(allProductIds));
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [categories]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setLoading(true); // Set loading to true when fetching starts
+    fetch('http://localhost:5000/api/store/categories/')
+      .then(res => res.json())
+      .then(data => {
+        setCategories(data);
+        const initial = {};
+        // Ensure data is an array before iterating, or handle object iteration
+        if (Array.isArray(data)) {
+          data.forEach(category => {
+            initial[category.name] = 4; // Assuming category.name is unique
+          });
+        } else if (typeof data === 'object' && data !== null) {
+          // If categories is an object, iterate over its values
+          Object.values(data).forEach(category => {
+            initial[category.name] = 4;
+          });
+        }
+        setVisibleProducts(initial);
+      })
+      .catch(err => {
+        console.error('Error fetching categories:', err);
+        setCategories([]); // Set to empty array on error
+      })
+      .finally(() => {
+        // Add a small delay to show the skeleton effect
+          setLoading(false); // Set loading to false after data is fetched
+    // Adjust delay as needed
+      });
+  }, []);
 
-  const showMoreProducts = (category) => {
+  // Animate cards on load - now depends on loading state too
+  useEffect(() => {
+    if (!loading && Object.keys(categories).length > 0) {
+      const timer = setTimeout(() => {
+        const allProductIds = Object.values(categories).flatMap(cat =>
+          (cat.products || []).slice(0, 4).map(p => p.id)
+        );
+        setAnimatedCards(new Set(allProductIds));
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [categories, loading]);
+
+  const showMoreProducts = (categoryName) => {
     setVisibleProducts(prev => ({
       ...prev,
-      [category]: categories[category].products.length
+      [categoryName]: categories[categoryName].products.length
     }));
-    
+
     // Animate new cards
-    const newCards = categories[category].products.slice(visibleProducts[category]);
+    const newCards = categories[categoryName].products.slice(visibleProducts[categoryName]);
     setTimeout(() => {
       setAnimatedCards(prev => new Set([...prev, ...newCards.map(p => p.id)]));
     }, 50);
@@ -61,29 +82,45 @@ const ProductShowcase = () => {
   };
 
   const navigateToCategory = (categoryId) => {
-    // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
-    // ในระบบจริงจะเป็นแบบนี้:
     console.log(categoryId);
     navigate(`/category/${categoryId}`);
-    // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
-  };
-    const navigateToProduct = (productId) => {
-    // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
-    // ในระบบจริงจะเป็นแบบนี้:  
- navigate(`/detailProducts/${productId}`)
-    // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
   };
 
+  const navigateToProduct = (productId) => {
+    navigate(`/detailProducts/${productId}`);
+  };
+
+  // Skeleton Card Component
+  const ProductSkeletonCard = ({ index }) => (
+    <div
+      className={`group product-card bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6
+        border border-sky-200/50 cursor-pointer
+        animate-pulse`} // Add animate-pulse for shimmer effect
+      style={{ animationDelay: `${index * 100}ms` }}
+    >
+      <div className="relative mb-3 sm:mb-4">
+        <div className="mb-3 sm:mb-4 bg-gray-200 rounded-xl w-full h-32 sm:h-40"></div>
+        <div className="absolute top-2 right-2 p-1.5 sm:p-2 rounded-full bg-gray-300 w-8 h-8"></div>
+      </div>
+      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      <div className="flex items-center justify-between mt-4">
+        <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+        <div className="flex space-x-1 sm:space-x-2">
+          <div className="p-1.5 sm:p-2 rounded-full bg-gray-300 w-8 h-8"></div>
+        </div>
+      </div>
+    </div>
+  );
 
   const ProductCard = ({ product, index }) => {
     const isAnimated = animatedCards.has(product.id);
     const isFavorite = favorites.has(product.id);
-    console.log('📦 product:', product); // เพิ่มตรงนี้
-    
+
     return (
-      <div 
-        className={`group product-card bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 
-          hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-2xl 
+      <div
+        className={`group product-card bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6
+          hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-2xl
           border border-sky-200/50 hover:border-blue-400/50 cursor-pointer
           ${isAnimated ? 'animate-fade-in-up' : 'opacity-0'}`}
         style={{ animationDelay: `${index * 100}ms` }}
@@ -91,15 +128,12 @@ const ProductShowcase = () => {
         <div className="relative mb-3 sm:mb-4">
           <div className="mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300 text-center">
             <img
-              src={product.image || product.image_Main_path }
+              src={product.image || product.image_Main_path}
               alt={product.name}
               className="w-full h-32 sm:h-40 object-cover rounded-xl"
-              // onError={(e) => {
-              //   e.target.src = `https://via.placeholder.com/400x300/3b82f6/ffffff?text=${encodeURIComponent(product.name)}`;
-              // }}
             />
           </div>
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               toggleFavorite(product.id);
@@ -110,25 +144,14 @@ const ProductShowcase = () => {
             <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
           </button>
         </div>
-        
+
         <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
           {product.name}
         </h3>
-        
-        <div className="flex items-center mb-2 sm:mb-3">
-          <div className="flex items-center text-yellow-500 mr-2">
-            <Star size={12} fill="currentColor" />
-            <span className="ml-1 text-xs sm:text-sm font-medium">{product.rating}</span>
-          </div>
-          <span className="text-slate-500 text-xs sm:text-sm">({product.reviews})</span>
-        </div>
-        
+
         <div className="flex items-center justify-between">
           <span className="text-lg sm:text-xl lg:text-2xl font-bold text-sky-600">{product.price}</span>
           <div className="flex space-x-1 sm:space-x-2">
-            {/* <button className="p-1.5 sm:p-2 rounded-full bg-sky-100 text-sky-600 hover:bg-sky-200 transition-colors">
-              <Eye size={14} />
-            </button> */}
             <button onClick={() => navigateToProduct(product.id)} className="p-1.5 sm:p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors">
               <ShoppingCart size={14} />
             </button>
@@ -141,168 +164,121 @@ const ProductShowcase = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50">
       {/* Hero Section */}
-     <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-800 to-blue-700 py-10">
-  {/* เพิ่ม overlay ให้ดูมืดลงนิดเพื่อให้ข้อความดูชัด */}
-  <div className="absolute inset-0 bg-black/20"></div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-800 to-blue-700 py-10">
+        <div className="absolute inset-0 bg-black/20"></div>
 
-  <div className="container mx-auto px-4 max-w-7xl relative z-10">
-    <div className="mt-20 text-center animate-fade-in">
-      <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
-        โพธิ์ทอง พริ้นติ้ง
-      </h1>
-      <p className="text-base md:text-lg text-slate-100 mb-6 max-w-2xl mx-auto">
-        ค้นพบสินค้าคุณภาพดี ราคาดี จากทุกหมวดหมู่ในที่เดียว  
-      </p>
-      <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm">
-        <div className="flex items-center text-amber-300">
-          <Star className="text-amber-400 mr-1" size={16} fill="currentColor" />
-          <span>รับสกรีนโลโก้ทุกรูปเเบบ</span>
+        <div className="container mx-auto px-4 max-w-7xl relative z-10">
+          <div className="mt-20 text-center animate-fade-in">
+            <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
+              โพธิ์ทอง พริ้นติ้ง
+            </h1>
+            <p className="text-base md:text-lg text-slate-100 mb-6 max-w-2xl mx-auto">
+              ค้นพบสินค้าคุณภาพดี ราคาดี จากทุกหมวดหมู่ในที่เดียว
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm">
+              <div className="flex items-center text-amber-300">
+                <Star className="text-amber-400 mr-1" size={16} fill="currentColor" />
+                <span>รับสกรีนโลโก้ทุกรูปเเบบ</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-indigo-800 to-transparent"></div>
       </div>
-    </div>
-  </div>
-
-  {/* Gradient ล่างเพื่อให้ดูมีเลเยอร์ */}
-  <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-indigo-800 to-transparent"></div>
-</div>
-
 
       {/* Products Section */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-16">
-        {Object.entries(categories).map(([categoryName, categoryData], categoryIndex) => (
-             console.log('📦 categorylalalala:', categoryData), // เพิ่มตรงนี้
-          <div key={categoryData.name} className="mb-20">
-            {/* Category Header */}
-            <div className="flex items-center mb-12 animate-slide-in-left" 
-                 style={{ animationDelay: `${categoryIndex * 200}ms` }}>
-              <div className={`text-4xl mr-4 p-4 rounded-2xl bg-gradient-to-r ${categoryData.gradient} shadow-lg`}>
-                {categoryData.icon}
+        {loading ? (
+          // Skeleton Loader for categories and products
+          Array.from({ length: 3 }).map((_, categoryIndex) => ( // Show 3 skeleton categories
+            <div key={`skeleton-category-${categoryIndex}`} className="mb-20">
+              {/* Category Header Skeleton */}
+              <div className="flex items-center mb-12 animate-slide-in-left"
+                style={{ animationDelay: `${categoryIndex * 200}ms` }}>
+                <div className="text-4xl mr-4 p-4 rounded-2xl bg-gray-300 shadow-lg animate-pulse w-16 h-16"></div>
+                <div>
+                  <div className="h-6 bg-gray-300 rounded w-64 mb-2 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">{categoryData.name}</h2>
-                <p className="text-slate-600">สินค้าคุณภาพดีที่คัดสรรมาแล้ว</p>
+
+              {/* Products Grid Skeleton */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-8">
+                {Array.from({ length: 4 }).map((_, productIndex) => (
+                  <ProductSkeletonCard key={`skeleton-product-${categoryIndex}-${productIndex}`} index={productIndex} />
+                ))}
               </div>
-            </div>
 
-            {/* Products Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-8">
-              {categoryData.products.slice(0, visibleProducts[categoryName] || 4).map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
-              ))}
-            </div>
-
-            {/* Show More Button */}
-            {visibleProducts[categoryName] < categoryData.products.length && (
+              {/* Show More Button Skeleton */}
               <div className="text-center mb-6">
+                <div className="h-12 bg-gray-300 rounded-full w-48 mx-auto animate-pulse"></div>
+              </div>
+
+              {/* View All Category Button Skeleton */}
+              <div className="text-center">
+                <div className="h-12 bg-gray-300 rounded-full w-64 mx-auto animate-pulse"></div>
+              </div>
+            </div>
+          ))
+        ) : (
+          // Actual Content
+          Object.entries(categories).map(([categoryName, categoryData], categoryIndex) => (
+            <div key={categoryData.name} className="mb-20">
+              {/* Category Header */}
+              <div className="flex items-center mb-12 animate-slide-in-left"
+                style={{ animationDelay: `${categoryIndex * 200}ms` }}>
+                <div className={`text-4xl mr-4 p-4 rounded-2xl bg-gradient-to-r ${categoryData.gradient} shadow-lg`}>
+                  {categoryData.icon}
+                </div>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">{categoryData.name}</h2>
+                  <p className="text-slate-600">สินค้าคุณภาพดีที่คัดสรรมาแล้ว</p>
+                </div>
+              </div>
+
+              {/* Products Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-8">
+                {(categoryData.products || []).slice(0, visibleProducts[categoryName] || 4).map((product, index) => (
+                  <ProductCard key={product.id} product={product} index={index} />
+                ))}
+              </div>
+
+              {/* Show More Button */}
+              {visibleProducts[categoryName] < (categoryData.products || []).length && (
+                <div className="text-center mb-6">
+                  <button
+                    onClick={() => showMoreProducts(categoryName)}
+                    className="group inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-green-500 to-emerald-600
+                      text-white font-semibold rounded-full hover:from-green-400 hover:to-emerald-500
+                      transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-sm sm:text-base"
+                  >
+                    <Plus size={20} className="mr-2 group-hover:rotate-180 transition-transform duration-300" />
+                    ดูเพิ่มเติม
+                    <ChevronRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+                  </button>
+                </div>
+              )}
+
+              {/* View All Category Button */}
+              <div className="text-center">
                 <button
-                  onClick={() => showMoreProducts(categoryName)}
-                  className="group inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-green-500 to-emerald-600 
-                    text-white font-semibold rounded-full hover:from-green-400 hover:to-emerald-500 
+                  onClick={() => navigateToCategory(categoryData.id)}
+                  className="group inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-sky-500 to-blue-600
+                    text-white font-semibold rounded-full hover:from-sky-400 hover:to-blue-500
                     transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-sm sm:text-base"
                 >
-                  <Plus size={20} className="mr-2 group-hover:rotate-180 transition-transform duration-300" />
-                  ดูเพิ่มเติม
+                  <Eye size={20} className="mr-2 group-hover:scale-110 transition-transform duration-300" />
+                  ดูสินค้าทั้งหมดใน {categoryData.name}
                   <ChevronRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                 </button>
               </div>
-            )}
-
-            {/* View All Category Button */}
-            <div className="text-center">
-              <button
-                onClick={() => navigateToCategory(categoryData.id)}
-                className="group inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-sky-500 to-blue-600 
-                  text-white font-semibold rounded-full hover:from-sky-400 hover:to-blue-500 
-                  transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-sm sm:text-base"
-              >
-                <Eye size={20} className="mr-2 group-hover:scale-110 transition-transform duration-300" />
-                ดูสินค้าทั้งหมดใน {categoryData.name}
-                <ChevronRight size={20} className="ml-2 group-hover:translate-x-1 transition-transform duration-300" />
-              </button>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
-
       {/* Footer */}
-     <footer className="bg-gradient-to-r from-slate-800 to-slate-900 text-white py-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-xl font-bold mb-4 text-cyan-400">เกี่ยวกับเรา</h3>
-              <p className="text-gray-300 leading-relaxed">
-                ผู้เชี่ยวชาญด้านเฟอร์นิเจอร์คุณภาพสูง มุ่งมั่นสร้างสรรค์พื้นที่อยู่อาศัยที่สมบูรณ์แบบ
-              </p>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-4 text-cyan-400">หมวดหมู่สินค้า</h3>
-              <div className="space-y-2 text-gray-300">
-                <p className="hover:text-cyan-400 cursor-pointer transition-colors">เฟอร์นิเจอร์ห้องนั่งเล่น</p>
-                <p className="hover:text-cyan-400 cursor-pointer transition-colors">เฟอร์นิเจอร์ห้องนอน</p>
-                <p className="hover:text-cyan-400 cursor-pointer transition-colors">เฟอร์นิเจอร์ห้องครัว</p>
-                <p className="hover:text-cyan-400 cursor-pointer transition-colors">เฟอร์นิเจอร์สำนักงาน</p>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-4 text-cyan-400">บริการลูกค้า</h3>
-              <div className="space-y-2 text-gray-300">
-                <p className="flex items-center">
-                  <span className="mr-2">📞</span> 02-xxx-xxxx
-                </p>
-                <p className="flex items-center">
-                  <span className="mr-2">📧</span> support@furniture.com
-                </p>
-                <p className="flex items-center">
-                  <span className="mr-2">🕒</span> จันทร์-เสาร์ 09:00-18:00
-                </p>
-                <p className="flex items-center">
-                  <span className="mr-2">💬</span> แชทสด 24/7
-                </p>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-4 text-cyan-400">ติดตามเรา</h3>
-              <div className="flex space-x-4 mb-4">
-                <button className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full flex items-center justify-center hover:from-blue-500 hover:to-blue-600 transition-all duration-300 transform hover:scale-110">
-                  <span className="text-white font-bold">f</span>
-                </button>
-                <button className="w-12 h-12 bg-gradient-to-r from-pink-600 to-rose-600 rounded-full flex items-center justify-center hover:from-pink-500 hover:to-rose-500 transition-all duration-300 transform hover:scale-110">
-                  <span className="text-white font-bold">ig</span>
-                </button>
-                <button className="w-12 h-12 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center hover:from-green-500 hover:to-emerald-500 transition-all duration-300 transform hover:scale-110">
-                  <span className="text-white font-bold">L</span>
-                </button>
-                <button className="w-12 h-12 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-full flex items-center justify-center hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 transform hover:scale-110">
-                  <span className="text-white font-bold">X</span>
-                </button>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  {/* <Zap className="text-cyan-400" size={16} /> */}
-                  <span className="text-gray-300 text-sm">อัพเดทโปรโมชั่นใหม่</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {/* <Award className="text-cyan-400" size={16} /> */}
-                  <span className="text-gray-300 text-sm">รับสิทธิพิเศษก่อนใคร</span>
-                </div>  
-              </div>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-700 mt-12 pt-8">
-            <div className="flex flex-col md:flex-row items-center justify-between">
-              <p className="text-gray-400 mb-4 md:mb-0">
-                © 2025 Modern Furniture Store. สงวนลิขสิทธิ์ทั้งหมด
-              </p>
-              <div className="flex space-x-6 text-gray-400 text-sm">
-                <a href="#" className="hover:text-cyan-400 transition-colors">นโยบายความเป็นส่วนตัว</a>
-                <a href="#" className="hover:text-cyan-400 transition-colors">เงื่อนไขการใช้งาน</a>
-                <a href="#" className="hover:text-cyan-400 transition-colors">นโยบายการคืนสินค้า</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
       <style jsx>{`
         @keyframes fadeInUp {
           from {
@@ -347,6 +323,20 @@ const ProductShowcase = () => {
 
         .animate-slide-in-left {
           animation: slideInLeft 0.8s ease-out;
+        }
+
+        /* Add Tailwind's animate-pulse for shimmer effect */
+        .animate-pulse {
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: .5;
+          }
         }
 
         .product-card {

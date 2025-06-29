@@ -1,32 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ShoppingCart, Heart, Star, Eye, Plus } from 'lucide-react';
-import { useNavigate,useParams} from 'react-router-dom';
+import { useParams,useNavigate } from 'react-router-dom';
+
 const ProductShowcase = () => {
   const [visibleProducts, setVisibleProducts] = useState({});
   const [favorites, setFavorites] = useState(new Set());
   const [animatedCards, setAnimatedCards] = useState(new Set());
-  const [categories, setCategories] = useState({
-  });
-  const {categoryId} = useParams();
+  const [categories, setCategories] = useState({});
+  const [loading, setLoading] = useState(true); // เพิ่ม loading state
+  const {categoryId} = useParams(); // สำหรับตัวอย่าง
   const navigate = useNavigate();
-      const navigateToCategory = (subcategoryId) => {
-    // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
-    // ในระบบจริงจะเป็นแบบนี้:
-    navigate(`/P_insubcategory/${subcategoryId}`);
-    // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
-  };
-  const navigateToProduct = (productId) =>{
-    navigate(`/detailProducts/${productId}`);
-  }
-  
- useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  fetch(`http://localhost:5000/api/store/subcategories/${categoryId}`)
-    .then(res => res.json())
-    .then(data => setCategories(data))
-    .catch(err => console.error('Error fetching categories:', err));
-}, [categoryId]);
 
+  const navigateToCategory = (subcategoryId) => {
+     navigate(`/P_insubcategory/${subcategoryId}`);
+  };
+
+  const navigateToProduct = (productId) => {
+  navigate(`/detailProducts/${productId}`);
+  };
+
+ 
+
+  useEffect( () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    const loadData = async () => {
+    setLoading(true); // เริ่มต้น loading
+    try {
+      const response = await fetch(`http://localhost:5000/api/store/subcategories/${categoryId}`);
+      const data = await response.json();
+      setCategories(data);
+    } catch (err) {
+      console.error('โหลดหมวดหมู่ย่อยล้มเหลว:', err);
+    } finally {
+      setLoading(false); // หยุด loading เมื่อเสร็จ
+    }
+  };
+
+  loadData();
+}, [categoryId]);
 
   // Initialize visible products (show 4 products per category initially)
   useEffect(() => {
@@ -73,6 +84,53 @@ const ProductShowcase = () => {
     });
   };
 
+  // Skeleton Loading Components
+  const SkeletonCard = ({ index }) => (
+    <div 
+      className="bg-white/90 backdrop-blur-sm rounded-xl p-3 border border-slate-200/70 animate-pulse"
+      style={{ animationDelay: `${index * 100}ms` }}
+    >
+      <div className="relative mb-3">
+        <div className="w-full h-48 bg-gray-300 rounded-lg"></div>
+        <div className="absolute top-2 right-2 w-7 h-7 bg-gray-300 rounded-full"></div>
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+        <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+        <div className="flex items-center justify-between">
+          <div className="h-6 bg-gray-300 rounded w-20"></div>
+          <div className="flex space-x-1">
+            <div className="w-7 h-7 bg-gray-300 rounded-full"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const SkeletonCategoryHeader = ({ index }) => (
+    <div 
+      className="flex items-center justify-between mb-6 animate-pulse"
+      style={{ animationDelay: `${index * 200}ms` }}
+    >
+      <div className="flex items-center">
+        <div className="w-8 h-8 bg-gray-300 rounded mr-3"></div>
+        <div className="h-6 bg-gray-300 rounded w-40"></div>
+      </div>
+      <div className="h-4 bg-gray-300 rounded w-20"></div>
+    </div>
+  );
+
+  const SkeletonSection = ({ categoryIndex }) => (
+    <div key={categoryIndex} className="mb-12">
+      <SkeletonCategoryHeader index={categoryIndex} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+        {[...Array(4)].map((_, index) => (
+          <SkeletonCard key={index} index={index} />
+        ))}
+      </div>
+    </div>
+  );
+
   const ProductCard = ({ product, index }) => {
     const isAnimated = animatedCards.has(product.id);
     const isFavorite = favorites.has(product.id);
@@ -111,22 +169,10 @@ const ProductShowcase = () => {
         <h3 className="text-sm font-semibold text-slate-800 mb-2 group-hover:text-purple-600 transition-colors line-clamp-2 leading-tight">
           {product.name}
         </h3>
-        
-        <div className="flex items-center mb-2">
-          <div className="flex items-center text-amber-500 mr-2">
-            <Star size={12} fill="currentColor" />
-            <span className="ml-1 text-xs font-medium">{product.rating}</span>
-          </div>
-          <span className="text-slate-500 text-xs">({product.reviews})</span>
-        </div>
-        
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-purple-600">{product.price}</span>
           <div className="flex space-x-1">
-            {/* <button  className="p-1.5 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors">
-              <Eye size={14} />
-            </button> */}
-            <button  onClick={() => navigateToProduct(product.id)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
+            <button onClick={() => navigateToProduct(product.id)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
               <ShoppingCart size={14} /> 
             </button>
           </div>
@@ -138,78 +184,87 @@ const ProductShowcase = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50">
       {/* Hero Section */}
-<div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-800 to-blue-700 py-10">
-  {/* เพิ่ม overlay ให้ดูมืดลงนิดเพื่อให้ข้อความดูชัด */}
-  <div className="absolute inset-0 bg-black/20"></div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-800 to-blue-700 py-10">
+        <div className="absolute inset-0 bg-black/20"></div>
 
-  <div className="container mx-auto px-4 max-w-7xl relative z-10">
-    <div className="mt-20 text-center animate-fade-in">
-      <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
-        โพธิ์ทอง พริ้นติ้ง
-      </h1>
-      <p className="text-base md:text-lg text-slate-100 mb-6 max-w-2xl mx-auto">
-        ค้นพบสินค้าคุณภาพดี ราคาดี จากทุกหมวดหมู่ในที่เดียว  
-      </p>
-      <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm">
-        <div className="flex items-center text-amber-300">
-          <Star className="text-amber-400 mr-1" size={16} fill="currentColor" />
-          <span>รับสกรีนโลโก้ทุกรูปเเบบ</span>
+        <div className="container mx-auto px-4 max-w-7xl relative z-10">
+          <div className="mt-20 text-center animate-fade-in">
+            <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
+              โพธิ์ทอง พริ้นติ้ง
+            </h1>
+            <p className="text-base md:text-lg text-slate-100 mb-6 max-w-2xl mx-auto">
+              ค้นพบสินค้าคุณภาพดี ราคาดี จากทุกหมวดหมู่ในที่เดียว  
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm">
+              <div className="flex items-center text-amber-300">
+                <Star className="text-amber-400 mr-1" size={16} fill="currentColor" />
+                <span>รับสกรีนโลโก้ทุกรูปแบบ</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  {/* Gradient ล่างเพื่อให้ดูมีเลเยอร์ */}
-  <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-indigo-800 to-transparent"></div>
-</div>
+        <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-indigo-800 to-transparent"></div>
+      </div>
 
       {/* Products Section */}
       <div className="container mx-auto px-4 max-w-7xl py-8">
-        {Object.entries(categories).map(([categoryName, categoryData], categoryIndex) => (
-          <div key={categoryData.name} className="mb-12">
-            {/* Category Header */}
-            <div className="flex items-center justify-between mb-6 animate-slide-in-left" 
-                 style={{ animationDelay: `${categoryIndex * 200}ms` }}>
-              <div className="flex items-center">
-                <div className="text-3xl mr-3">{categoryData.icon}</div>
-                <h2 className="text-xl md:text-2xl font-bold text-slate-800">{categoryData.name}</h2>
-              </div>
-              <button 
-                onClick={() => navigateToCategory(categoryData.id)}
-                className="flex items-center text-purple-600 hover:text-purple-700 transition-colors text-sm md:text-base"
-              >
-                <span>ดูทั้งหมด</span>
-                <ChevronRight size={16} className="ml-1" />
-              </button>
-            </div>
-
-            {/* Products Grid - 2 columns on mobile, 4 on desktop */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-              {categoryData.products
-                .slice(0, visibleProducts[categoryName] || 4)
-                .map((product, index) => (
-                  <ProductCard key={product.id} product={product} index={index} />
-                ))}
-            </div>
-
-            {/* Show More Button */}
-            {visibleProducts[categoryName] < categoryData.products.length && (
-              <div className="text-center mt-6">
-                <button
-                  onClick={() => showMoreProducts(categoryName)}
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-violet-600 
-                    text-white font-semibold rounded-full hover:from-purple-700 hover:to-violet-700 
-                    transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+        {loading ? (
+          // แสดง Skeleton Loading เมื่อกำลังโหลด
+          <>
+            {[...Array(3)].map((_, categoryIndex) => (
+              <SkeletonSection key={categoryIndex} categoryIndex={categoryIndex} />
+            ))}
+          </>
+        ) : (
+          // แสดงข้อมูลจริงเมื่อโหลดเสร็จ
+          Object.entries(categories).map(([categoryName, categoryData], categoryIndex) => (
+            <div key={categoryData.name} className="mb-12">
+              {/* Category Header */}
+              <div className="flex items-center justify-between mb-6 animate-slide-in-left" 
+                   style={{ animationDelay: `${categoryIndex * 200}ms` }}>
+                <div className="flex items-center">
+                  <div className="text-3xl mr-3">{categoryData.icon}</div>
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-800">{categoryData.name}</h2>
+                </div>
+                <button 
+                  onClick={() => navigateToCategory(categoryData.id)}
+                  className="flex items-center text-purple-600 hover:text-purple-700 transition-colors text-sm md:text-base"
                 >
-                  <Plus size={16} className="mr-2" />
-                  แสดงเพิ่มเติม
+                  <span>ดูทั้งหมด</span>
+                  <ChevronRight size={16} className="ml-1" />
                 </button>
               </div>
-            )}
-          </div>
-        ))}
+
+              {/* Products Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                {categoryData.products
+                  .slice(0, visibleProducts[categoryName] || 4)
+                  .map((product, index) => (
+                    <ProductCard key={product.id} product={product} index={index} />
+                  ))}
+              </div>
+
+              {/* Show More Button */}
+              {visibleProducts[categoryName] < categoryData.products.length && (
+                <div className="text-center mt-6">
+                  <button
+                    onClick={() => showMoreProducts(categoryName)}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-violet-600 
+                      text-white font-semibold rounded-full hover:from-purple-700 hover:to-violet-700 
+                      transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  >
+                    <Plus size={16} className="mr-2" />
+                    แสดงเพิ่มเติม
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
- <footer className="bg-gradient-to-r from-slate-800 to-slate-900 text-white py-16">
+
+      <footer className="bg-gradient-to-r from-slate-800 to-slate-900 text-white py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
@@ -262,11 +317,9 @@ const ProductShowcase = () => {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  {/* <Zap className="text-cyan-400" size={16} /> */}
                   <span className="text-gray-300 text-sm">อัพเดทโปรโมชั่นใหม่</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {/* <Award className="text-cyan-400" size={16} /> */}
                   <span className="text-gray-300 text-sm">รับสิทธิพิเศษก่อนใคร</span>
                 </div>  
               </div>
@@ -287,6 +340,7 @@ const ProductShowcase = () => {
           </div>
         </div>
       </footer>
+
       {/* Custom Animations */}
       <style jsx>{`
         @keyframes fade-in-up {
@@ -316,6 +370,15 @@ const ProductShowcase = () => {
           }
         }
         
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+        
         .animate-fade-in-up {
           animation: fade-in-up 0.6s ease-out forwards;
         }
@@ -326,6 +389,10 @@ const ProductShowcase = () => {
         
         .animate-slide-in-left {
           animation: slide-in-left 0.6s ease-out forwards;
+        }
+        
+        .animate-pulse {
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         
         .line-clamp-2 {

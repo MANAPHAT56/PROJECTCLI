@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   Search,
   Filter,
   Grid3X3,
@@ -25,6 +25,7 @@ const WorksPortfolio = () => {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState('all');
   const [selectedSort, setSelectedSort] = useState('latest');
@@ -39,7 +40,7 @@ const WorksPortfolio = () => {
   const [totalCount, setTotalCount] = useState(0);
 
   const API_BASE_URL = 'http://localhost:5000/api';
-
+  console.log("rerender")
   // Sort options
   const sortOptions = [
     { value: 'latest', label: 'ล่าสุด', description: 'ผลงานที่สร้างล่าสุด' },
@@ -92,11 +93,11 @@ const WorksPortfolio = () => {
         sort: selectedSort,
         ...(selectedCategory !== 'all' && { category: selectedCategory }),
         ...(selectedSubcategory !== 'all' && { subcategory: selectedSubcategory }),
-        ...(searchTerm && { search: searchTerm })
+        ...(debouncedSearchTerm && { search: debouncedSearchTerm })
       });
 
       const response = await fetch(`${API_BASE_URL}/works/home?${params}`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch works');
       }
@@ -117,7 +118,7 @@ const WorksPortfolio = () => {
       console.error('Error fetching works:', error);
       setError('Failed to load works');
     }
-  }, [selectedCategory, selectedSubcategory, searchTerm, selectedSort]);
+  }, [selectedCategory, selectedSubcategory, debouncedSearchTerm, selectedSort]);
 
   // Fetch subcategories when category changes
   useEffect(() => {
@@ -149,6 +150,16 @@ const WorksPortfolio = () => {
     setSelectedSubcategory('all');
   }, [selectedCategory]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // หน่วง 500ms
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
   // Initial load and filter changes
   useEffect(() => {
     const loadWorks = async () => {
@@ -163,7 +174,7 @@ const WorksPortfolio = () => {
   // Load more works
   const loadMoreWorks = async () => {
     if (loadingMore || !hasMore) return;
-    
+
     setLoadingMore(true);
     await fetchWorks(page + 1, true);
     setLoadingMore(false);
@@ -187,7 +198,7 @@ const WorksPortfolio = () => {
     setFavorites(newFavorites);
   };
 
-  const WorkCard = ({ work }) => (
+  const WorkCard = React.memo(({ work }) => (
     <div className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-700/50 hover:border-blue-500/50">
       <div className="relative overflow-hidden">
         <img
@@ -199,10 +210,10 @@ const WorksPortfolio = () => {
             e.target.src = '/api/placeholder/400/250';
           }}
         />
-        
+
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        
+
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
           {work.is_custom && (
@@ -224,9 +235,9 @@ const WorksPortfolio = () => {
           onClick={() => toggleFavorite(work.id)}
           className="absolute top-3 right-3 p-2 bg-slate-800/90 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-600 shadow-lg border border-slate-600"
         >
-          <Heart 
-            size={16} 
-            className={`${favorites.has(work.id) ? 'fill-red-400 text-red-400' : 'text-slate-300'} transition-colors`} 
+          <Heart
+            size={16}
+            className={`${favorites.has(work.id) ? 'fill-red-400 text-red-400' : 'text-slate-300'} transition-colors`}
           />
         </button>
 
@@ -256,7 +267,7 @@ const WorksPortfolio = () => {
         <h3 className="text-lg font-bold text-slate-100 mb-2 line-clamp-1 group-hover:text-blue-400 transition-colors">
           {work.name}
         </h3>
-        
+
         <p className="text-sm text-slate-400 mb-4 line-clamp-2">
           {work.main_description}
         </p>
@@ -270,9 +281,9 @@ const WorksPortfolio = () => {
               </span>
             </div>
           </div>
-          
-          <button 
-            onClick={() => handleViewDetails(work.id)} 
+
+          <button
+            onClick={() => handleViewDetails(work.id)}
             className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg border border-blue-500"
           >
             ดูรายละเอียด
@@ -280,43 +291,10 @@ const WorksPortfolio = () => {
         </div>
       </div>
     </div>
-  );
-
-  if (loading && works.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-400 mx-auto mb-4"></div>
-            <Package className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-400" size={24} />
-          </div>
-          <p className="text-slate-300">กำลังโหลดผลงาน...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h3 className="text-xl font-semibold text-slate-100 mb-2">เกิดข้อผิดพลาด</h3>
-          <p className="text-slate-400 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 shadow-lg flex items-center gap-2 mx-auto border border-blue-500"
-          >
-            <RefreshCw size={16} />
-            ลองใหม่
-          </button>
-        </div>
-      </div>
-    );
-  }
+  ));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br bg-gray-950  text-gray-100 flex mt-13">
+    <div className="min-h-screen bg-gradient-to-br bg-gray-950 text-gray-100 flex mt-13">
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-8 text-center">
@@ -351,6 +329,7 @@ const WorksPortfolio = () => {
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
               <input
+                autoFocus
                 type="text"
                 placeholder="ค้นหาผลงาน..."
                 value={searchTerm}
@@ -428,8 +407,8 @@ const WorksPortfolio = () => {
                   <button
                     onClick={() => setGridSize(2)}
                     className={`flex-1 p-2 rounded-lg transition-colors flex items-center justify-center gap-2 border ${
-                      gridSize === 2 
-                        ? 'bg-blue-600 text-white shadow-md border-blue-500' 
+                      gridSize === 2
+                        ? 'bg-blue-600 text-white shadow-md border-blue-500'
                         : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border-slate-600'
                     }`}
                   >
@@ -439,8 +418,8 @@ const WorksPortfolio = () => {
                   <button
                     onClick={() => setGridSize(3)}
                     className={`flex-1 p-2 rounded-lg transition-colors flex items-center justify-center gap-2 border ${
-                      gridSize === 3 
-                        ? 'bg-blue-600 text-white shadow-md border-blue-500' 
+                      gridSize === 3
+                        ? 'bg-blue-600 text-white shadow-md border-blue-500'
                         : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border-slate-600'
                     }`}
                   >
@@ -465,12 +444,38 @@ const WorksPortfolio = () => {
           </div>
         </div>
 
-        {/* Works Grid */}
-        {works.length > 0 ? (
+        {/* Loading and Error states now displayed inline */}
+        {loading && works.length === 0 && (
+          <div className="text-center py-12">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-400 mx-auto mb-4"></div>
+              <Package className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-400" size={24} />
+            </div>
+            <p className="text-slate-300">กำลังโหลดผลงาน...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h3 className="text-xl font-semibold text-slate-100 mb-2">เกิดข้อผิดพลาด</h3>
+            <p className="text-slate-400 mb-6">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 shadow-lg flex items-center gap-2 mx-auto border border-blue-500"
+            >
+              <RefreshCw size={16} />
+              ลองใหม่
+            </button>
+          </div>
+        )}
+
+        {/* Works Grid (only display if not in initial loading or error state AND there are works) */}
+        {!loading && !error && works.length > 0 ? (
           <>
             <div className={`grid gap-4 sm:gap-6 ${
-              gridSize === 2 
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+              gridSize === 2
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                 : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
             }`}>
               {works.map((work, index) => (
@@ -517,18 +522,21 @@ const WorksPortfolio = () => {
             )}
           </>
         ) : (
-          <div className="text-center py-20">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-slate-100 mb-2">ไม่พบผลงานที่ค้นหา</h3>
-            <p className="text-slate-400 mb-6">ลองเปลี่ยนคำค้นหาหรือตัวกรองใหม่</p>
-            <button
-              onClick={resetFilters}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 shadow-lg flex items-center gap-2 mx-auto border border-blue-500"
-            >
-              <RefreshCw size={16} />
-              รีเซ็ตตัวกรอง
-            </button>
-          </div>
+          // Display "No works found" only if not loading and no error, and works.length is 0
+          !loading && !error && works.length === 0 && (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">🔍</div>
+              <h3 className="text-xl font-semibold text-slate-100 mb-2">ไม่พบผลงานที่ค้นหา</h3>
+              <p className="text-slate-400 mb-6">ลองเปลี่ยนคำค้นหาหรือตัวกรองใหม่</p>
+              <button
+                onClick={resetFilters}
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 shadow-lg flex items-center gap-2 mx-auto border border-blue-500"
+              >
+                <RefreshCw size={16} />
+                รีเซ็ตตัวกรอง
+              </button>
+            </div>
+          )
         )}
       </div>
 

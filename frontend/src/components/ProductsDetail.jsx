@@ -165,7 +165,7 @@ const SubcategoryProductDetail = () => {
               className={i < Math.floor(productData.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'} 
             />
           ))} */}
-          <span className="font-bold text-slate-700 ml-2">{productData.rating}</span>
+          {/* <span className="font-bold text-slate-700 ml-2">{productData.rating}</span> */}
         </div>
         <span className="text-slate-500">• ขายแล้ว {productData.sold} ชิ้น</span>
       </div>
@@ -406,11 +406,11 @@ const SubcategoryProductDetail = () => {
               {product.name}
             </h3>
             <div className="flex items-center space-x-2 mb-3">
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <Star size={14} className="text-yellow-400 fill-current" />
                 <span className="text-sm font-semibold ml-1">{product.rating}</span>
-              </div>
-              <span className="text-sm text-slate-500">({product.reviews})</span>
+              </div> */}
+              {/* <span className="text-sm text-slate-500">({product.reviews})</span> */}
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
