@@ -34,6 +34,7 @@ const AdminDashboard = () => {
   const nameRef = useRef();
   const priceRef = useRef();
    const stockRef = useRef();
+   const iconRef = useRef();
   const [currentlyFocusedField, setCurrentlyFocusedField] = useState('name');
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState('products'); // products, categories, subcategories, dashboard
@@ -49,7 +50,7 @@ const AdminDashboard = () => {
   const [gridView, setGridView] = useState(true);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [pagination, setPagination] = useState({});
-    let newProductId;
+    let newProductId,newCategoryId,newSubcategoryId;
   const limit = 12;
  const navigateToProductsImage = (productId) => {
     // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router
@@ -88,6 +89,11 @@ useEffect(() => {
     el.setSelectionRange(length, length);
   }else if(currentlyFocusedField === 'stock' && stockRef.current){
       const el = stockRef.current;
+       el.focus();
+    const length = el.value.length;
+    el.setSelectionRange(length, length);
+  }else if(currentlyFocusedField === 'icon' && iconRef.current){
+      const el = iconRef.current;
        el.focus();
     const length = el.value.length;
     el.setSelectionRange(length, length);
@@ -153,7 +159,18 @@ useEffect(() => {
     }
     
   };
-
+   const DeleteProduct = (productId) => {
+      axios.delete(`http://localhost:5000/api/admin/delete/${productId}`).then((res) => {
+    });
+   }
+   const DeleteCategory = (categoryId) => {
+      axios.delete(`http://localhost:5000/api/admin/delete/category/${categoryId}`).then((res) => {
+    });
+   }
+    const DeleteSubcategory = (subcategoryId) => {
+      axios.delete(`http://localhost:5000/api/admin/delete/subcategory/${subcategoryId}`).then((res) => {
+    });
+   }
   const closeModal = () => {
     setShowModal(false);
     setSelectedItem(null);
@@ -174,8 +191,9 @@ useEffect(() => {
     e.preventDefault();
     
     if (modalType === 'add') {
-      
-                 const newProductData = {
+
+          if (currentView === 'products') {
+                         const newProductData = {
                   id : null,
         // We're sending all form data, but explicitly ensuring numbers are numbers
         name: formData.name, // Assuming 'name' is also in formData
@@ -216,23 +234,70 @@ useEffect(() => {
         //  console.log(response.json().productId+"newProdcutId data");
         const productId = await response.json();
            newProductId= productId.productId;
-          //  console.log(newProductId.productId+"newProdcutId data");
-    } catch (error) {
-        console.error('Error updating product:', error);
-    }         
-      if (currentView === 'products') {
-           setProducts(products => [...products, {
+                 setProducts(products => [...products, {
       ...newProductData,
       id: newProductId // ใช้ ID จาก server หรือสร้างชั่วคราว
     }]);
-        console.log(products)
+          //  console.log(newProductId.productId+"newProdcutId data");
+    } catch (error) {
+        console.error('Error updating product:', error);
+    } 
       } else if (currentView === 'categories') {
         const newCategory = {
           ...formData,
-          id: Date.now(),
-          gradient: 'from-blue-600 to-purple-600'
+        name: formData.name, // Assuming 'name' is also in formData
+        description : formData.description,
+        icon : formData.icon,
+        id : null
         };
-        setCategories([...categories, newCategory]);
+         try {
+        const response = await fetch(`http://localhost:5000/api/admin/new/category`, {
+            method: 'POST', // Use PUT for updating an existing resource
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
+            },
+            body: JSON.stringify(newCategory) // Send the prepared data as JSON
+        });
+        const category = await response.json();
+           newCategoryId= category.categoryId;
+                 setCategories(categories => [...categories, {
+      ...newCategory,
+      id: newCategoryId // ใช้ ID จาก server หรือสร้างชั่วคราว
+    }]);
+          //  console.log(newProductId.productId+"newProdcutId data");
+    } catch (error) {
+        console.error('Error updating product:', error);
+    } 
+         
+      } else if(currentView == "subcategories") {
+              const newSubcategory = {
+          ...formData,
+        name: formData.name, // Assuming 'name' is also in formData
+        description : formData.description,
+        icon : formData.icon,
+        id : null
+        };
+         try {
+        const response = await fetch(`http://localhost:5000/api/admin/new/subcategory`, {
+            method: 'POST', // Use PUT for updating an existing resource
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
+            },
+            body: JSON.stringify(newSubcategory) // Send the prepared data as JSON
+        });
+        const subcategory = await response.json();
+           newSubcategoryId= subcategory.subcategoryId;
+                 setSubcategories(subcategories => [...subcategories, {
+      ...newSubcategory,
+      id: newSubcategoryId // ใช้ ID จาก server หรือสร้างชั่วคราว
+    }]);
+          //  console.log(newProductId.productId+"newProdcutId data");
+    } catch (error) {
+        console.error('Error updating product:', error);
+    } 
+        
       }
     } else if (modalType === 'edit') {
       if (currentView === 'products') {
@@ -300,20 +365,78 @@ useEffect(() => {
     }
   }
    else if (currentView === 'categories') {
+                             const newCategoryData = {
+        name: formData.name, // Assuming 'name' is also in formData
+        description : formData.description,
+        icon : formData.icon,
+        id : selectedItem.id
+
+      };
         setCategories(categories.map(c => 
-          c.id === selectedItem.id ? { ...c, ...formData } : c
+          c.id === selectedItem.id ? { ...c, ...formData,
+             name: formData.name, // Assuming 'name' is also in formData
+        description : formData.description,
+        icon : formData.icon,
+        id : parseInt(selectedItem.id)
+} : c
         ));
+         const response = await fetch(`http://localhost:5000/api/admin/edit/category/${selectedItem.id}`, {
+            method: 'PUT', // Use PUT for updating an existing resource
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
+            },
+            body: JSON.stringify(newCategoryData), // Send the prepared data as JSON
+        });
+         if (!response.ok) {
+            // If the server response is not OK (e.g., 400, 500 status)
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update product on server.');
+        }
+      }else if(currentView == "subcategories"){
+          const newSubcategoryData = {
+        name: formData.name,
+        icon : formData.icon,
+        category_id : formData.category_id
+
+      };
+       setSubcategories(subcategories.map(s => 
+          s.id === selectedItem.id ? { ...s, ...formData,
+             name: formData.name, // Assuming 'name' is also in formData
+        description : formData.description,
+        icon : formData.icon,
+        id : parseInt(selectedItem.id)
+} : s
+        ));
+         const response = await fetch(`http://localhost:5000/api/admin/edit/subcategory/${selectedItem.id}`, {
+            method: 'PUT', // Use PUT for updating an existing resource
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
+            },
+            body: JSON.stringify(newSubcategoryData), // Send the prepared data as JSON
+        });
+         if (!response.ok) {
+            // If the server response is not OK (e.g., 400, 500 status)
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to update product on server.');
+        }
       }
       } 
          closeModal();
     }
-    
+   
  
   const handleDelete = () => {
     if (currentView === 'products') {
       setProducts(products.filter(p => p.id !== selectedItem.id));
+          DeleteProduct(selectedItem.id);
     } else if (currentView === 'categories') {
       setCategories(categories.filter(c => c.id !== selectedItem.id));
+      DeleteCategory(selectedItem.id);
+    }else if (currentView === 'subcategories') {
+      setSubcategories(subcategories.filter(s => s.id !== selectedItem.id));
+      DeleteSubcategory(selectedItem.id);
     }
     closeModal();
   };
@@ -549,7 +672,9 @@ useEffect(() => {
                     <Edit3 size={14} />
                   </button>
                   <button
-                    onClick={() => handleModal('delete', product)}
+                  onClick={() => {
+  handleModal('delete', product);
+}}
                     className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
                   >
                     <Trash2 size={14} />
@@ -623,7 +748,10 @@ useEffect(() => {
                           <Edit3 size={16} />
                         </button>
                         <button
-                          onClick={() => handleModal('delete', product)}
+                    
+                                       onClick={() => {
+  handleModal('delete', product);
+}}
                           className="text-red-400 hover:text-red-300"
                         >
                           <Trash2 size={16} />
@@ -931,6 +1059,7 @@ useEffect(() => {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">ชื่อหมวดหมู่</label>
                 <input
+                 onFocus={() => setCurrentlyFocusedField('name')}
                   ref={nameRef}
                   type="text"
                   value={formData.name}
@@ -945,6 +1074,8 @@ useEffect(() => {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">ไอคอน</label>
                 <input
+                 onFocus={() => setCurrentlyFocusedField('icon')}
+                  ref = {iconRef}
                   type="text"
                   value={formData.icon}
                  onChange={(e) => setFormData(prev => ({
@@ -956,21 +1087,24 @@ useEffect(() => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">รูปภาพ</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">คำอธิบาย</label>
                 <div className="flex items-center gap-2">
                   <input
+                   onFocus={() => setCurrentlyFocusedField('description')}
+                   ref = {descriptionRef}
                     type="text"
-                    value={formData.image_path}
+                    value={formData.description}
                      onChange={(e) => setFormData(prev => ({
   ...prev,
-  image_path: e.target.value
+  description: e.target.value
 }))}
                     className="flex-1 px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white"
-                    placeholder="URL รูปภาพ"
+                    placeholder="คำอธิบาย"
                   />
-                  <button className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-gray-300">
+                  {/* <button className="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-gray-300">
+                   
                     <Upload size={16} />
-                  </button>
+                  </button> */}
                 </div>
               </div>
             </>
@@ -981,6 +1115,7 @@ useEffect(() => {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">ชื่อหมวดหมู่ย่อย</label>
                 <input
+                  onFocus={() => setCurrentlyFocusedField('name')}
                   ref={nameRef}
                   type="text"
                   value={formData.name}
@@ -1011,6 +1146,8 @@ useEffect(() => {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">ไอคอน</label>
                 <input
+                  onFocus={() => setCurrentlyFocusedField('icon')}
+                  ref = {iconRef}
                   type="text"
                   value={formData.icon}
                    onChange={(e) => setFormData(prev => ({

@@ -3,15 +3,15 @@ CREATE TABLE Products (
   name VARCHAR(255) NOT NULL,
   price DECIMAL(10,2) NOT NULL,
   description VARCHAR(500), -- เพิ่ม field สำหรับ path รูปภาพ
-  image_Main_path VARCHAR(500)
+  image_Main_path VARCHAR(500),
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   category_id INT NOT NULL,
   subcategory_id INT NOT NULL,
   total_purchases INT DEFAULT 0,
   monthly_purchases INT DEFAULT 0,
   stock INT DEFAULT 0,
-  FOREIGN KEY (category_id) REFERENCES Categories(id),
-    FOREIGN KEY (subcategory_id) REFERENCES subcategories(id)
+    FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE CASCADE,
+  FOREIGN KEY (subcategory_id) REFERENCES Subcategories(id) ON DELETE CASCADE
 );
 
 CREATE TABLE product_images (

@@ -14,9 +14,12 @@ import {
   Zap,
   Palette,
   RefreshCw,
-  ArrowUpDown
+  ArrowUpDown,
+  Star,
+  Clock,
+  Tag
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+
 const WorksPortfolio = () => {
   const [works, setWorks] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -34,7 +37,7 @@ const WorksPortfolio = () => {
   const [page, setPage] = useState(1);
   const [error, setError] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
- const navigate=useNavigate();
+
   const API_BASE_URL = 'http://localhost:5000/api';
 
   // Sort options
@@ -46,11 +49,13 @@ const WorksPortfolio = () => {
     { value: 'category_asc', label: 'หมวดหมู่ (ก-ฮ)', description: 'เรียงตามหมวดหมู่ A-Z' },
     { value: 'category_desc', label: 'หมวดหมู่ (ฮ-ก)', description: 'เรียงตามหมวดหมู่ Z-A' }
   ];
-    const handleViewDetails = (workId) => {
-    // Here you would typically navigate to product details page
-    navigate(`/worksDetail/${workId}`)
-     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const handleViewDetails = (workId) => {
+    // Navigate to work details page
+    console.log(`Viewing work ${workId}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
   // Fetch categories and subcategories on mount
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -141,7 +146,7 @@ const WorksPortfolio = () => {
     };
 
     fetchSubcategoriesByCategory();
-    setSelectedSubcategory('all'); // Reset subcategory when category changes
+    setSelectedSubcategory('all');
   }, [selectedCategory]);
 
   // Initial load and filter changes
@@ -183,28 +188,31 @@ const WorksPortfolio = () => {
   };
 
   const WorkCard = ({ work }) => (
-    <div className="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100">
+    <div className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-700/50 hover:border-blue-500/50">
       <div className="relative overflow-hidden">
         <img
-          src={work.cover_image || '/api/placeholder/300/200'}
+          src={work.cover_image || '/api/placeholder/400/250'}
           alt={work.name}
           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-700"
           loading="lazy"
           onError={(e) => {
-            e.target.src = '/api/placeholder/300/200';
+            e.target.src = '/api/placeholder/400/250';
           }}
         />
+        
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
           {work.is_custom && (
-            <span className="px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full flex items-center gap-1">
+            <span className="px-3 py-1 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg">
               <Zap size={10} />
               สั่งทำพิเศษ
             </span>
           )}
           {work.is_sample && (
-            <span className="px-2 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs font-bold rounded-full flex items-center gap-1">
+            <span className="px-3 py-1 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg">
               <Palette size={10} />
               ตัวอย่าง
             </span>
@@ -214,53 +222,59 @@ const WorksPortfolio = () => {
         {/* Favorite Button */}
         <button
           onClick={() => toggleFavorite(work.id)}
-          className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-50 shadow-lg"
+          className="absolute top-3 right-3 p-2 bg-slate-800/90 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-600 shadow-lg border border-slate-600"
         >
           <Heart 
             size={16} 
-            className={`${favorites.has(work.id) ? 'fill-red-500 text-red-500' : 'text-gray-600'} transition-colors`} 
+            className={`${favorites.has(work.id) ? 'fill-red-400 text-red-400' : 'text-slate-300'} transition-colors`} 
           />
         </button>
 
         {/* Quick Actions */}
         <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <button className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors shadow-lg">
+          <button className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors shadow-lg border border-blue-500">
             <Eye size={16} />
           </button>
-          <button className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors shadow-lg">
+          <button className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full transition-colors shadow-lg border border-emerald-500">
             <Download size={16} />
           </button>
-          <button className="p-2 bg-purple-500 hover:bg-purple-600 text-white rounded-full transition-colors shadow-lg">
+          <button className="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors shadow-lg border border-purple-500">
             <ExternalLink size={16} />
           </button>
         </div>
 
         {/* Category indicator */}
         <div className="absolute bottom-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
-          <span className="px-2 py-1 bg-black/50 backdrop-blur-sm text-white text-xs rounded-full">
+          <span className="px-3 py-1 bg-slate-900/80 backdrop-blur-sm text-slate-200 text-xs rounded-full border border-slate-600 flex items-center gap-1">
+            <Tag size={10} />
             {work.category_name || 'ไม่ระบุหมวดหมู่'}
           </span>
         </div>
       </div>
 
       <div className="p-5">
-        <h3 className="text-lg font-bold text-gray-800 mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors">
+        <h3 className="text-lg font-bold text-slate-100 mb-2 line-clamp-1 group-hover:text-blue-400 transition-colors">
           {work.name}
         </h3>
         
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+        <p className="text-sm text-slate-400 mb-4 line-clamp-2">
           {work.main_description}
         </p>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-            <span className="text-xs text-gray-500">
-              {new Date(work.created_at).toLocaleDateString('th-TH')}
-            </span>
+            <div className="flex items-center gap-1">
+              <Clock size={12} className="text-slate-500" />
+              <span className="text-xs text-slate-500">
+                {new Date(work.created_at).toLocaleDateString('th-TH')}
+              </span>
+            </div>
           </div>
           
-          <button onClick={() => handleViewDetails(work.id)} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md">
+          <button 
+            onClick={() => handleViewDetails(work.id)} 
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-medium rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg border border-blue-500"
+          >
             ดูรายละเอียด
           </button>
         </div>
@@ -270,13 +284,13 @@ const WorksPortfolio = () => {
 
   if (loading && works.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
           <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <Package className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-500" size={24} />
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-400 mx-auto mb-4"></div>
+            <Package className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-400" size={24} />
           </div>
-          <p className="text-gray-600">กำลังโหลดผลงาน...</p>
+          <p className="text-slate-300">กำลังโหลดผลงาน...</p>
         </div>
       </div>
     );
@@ -284,14 +298,14 @@ const WorksPortfolio = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4">⚠️</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">เกิดข้อผิดพลาด</h3>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h3 className="text-xl font-semibold text-slate-100 mb-2">เกิดข้อผิดพลาด</h3>
+          <p className="text-slate-400 mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-300 shadow-md flex items-center gap-2 mx-auto"
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 shadow-lg flex items-center gap-2 mx-auto border border-blue-500"
           >
             <RefreshCw size={16} />
             ลองใหม่
@@ -302,29 +316,29 @@ const WorksPortfolio = () => {
   }
 
   return (
-    <div className="mt-12 min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-800 mb-4">
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               ผลงาน
             </span>
-            <span className="text-gray-700"> & </span>
-            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <span className="text-slate-300"> & </span>
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               ตัวอย่าง
             </span>
           </h1>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
             สำรวจผลงานการออกแบบที่หลากหลายและตัวอย่างงานคุณภาพสูง
           </p>
-          <div className="mt-4 flex items-center justify-center gap-4 text-sm text-gray-500">
-            <div className="flex items-center gap-2">
-              <Layout size={16} className="text-blue-500" />
+          <div className="mt-4 flex items-center justify-center gap-4 text-sm text-slate-500">
+            <div className="flex items-center gap-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
+              <Layout size={16} className="text-blue-400" />
               <span>พบผลงาน {totalCount.toLocaleString()} รายการ</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Eye size={16} className="text-green-500" />
+            <div className="flex items-center gap-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
+              <Eye size={16} className="text-emerald-400" />
               <span>แสดง {works.length} รายการ</span>
             </div>
           </div>
@@ -332,16 +346,16 @@ const WorksPortfolio = () => {
 
         {/* Search & Filters */}
         <div className="mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-xl border border-white/20">
+          <div className="bg-slate-800/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-2xl border border-slate-700/50">
             {/* Search */}
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
                 placeholder="ค้นหาผลงาน..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent text-gray-700 placeholder-gray-400 shadow-sm"
+                className="w-full pl-10 pr-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-slate-200 placeholder-slate-400 shadow-sm"
               />
             </div>
 
@@ -349,7 +363,7 @@ const WorksPortfolio = () => {
             <div className="md:hidden mb-4">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-300 hover:bg-slate-600/50 transition-colors"
               >
                 <Filter size={16} />
                 ตัวกรอง
@@ -361,14 +375,14 @@ const WorksPortfolio = () => {
             <div className={`grid gap-4 ${showFilters || 'hidden md:grid'} md:grid-cols-2 lg:grid-cols-5`}>
               {/* Category Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่หลัก</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">หมวดหมู่หลัก</label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm"
+                  className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm"
                 >
                   {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
+                    <option key={category.id} value={category.id} className="bg-slate-800">
                       {category.name} ({category.count})
                     </option>
                   ))}
@@ -377,14 +391,14 @@ const WorksPortfolio = () => {
 
               {/* Subcategory Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่ย่อย</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">หมวดหมู่ย่อย</label>
                 <select
                   value={selectedSubcategory}
                   onChange={(e) => setSelectedSubcategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm"
+                  className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm"
                 >
                   {subcategories.map((subcategory) => (
-                    <option key={subcategory.id} value={subcategory.id}>
+                    <option key={subcategory.id} value={subcategory.id} className="bg-slate-800">
                       {subcategory.name} ({subcategory.count})
                     </option>
                   ))}
@@ -393,14 +407,14 @@ const WorksPortfolio = () => {
 
               {/* Sort Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">เรียงโดย</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">เรียงโดย</label>
                 <select
                   value={selectedSort}
                   onChange={(e) => setSelectedSort(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm"
+                  className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 shadow-sm"
                 >
                   {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <option key={option.value} value={option.value} className="bg-slate-800">
                       {option.label}
                     </option>
                   ))}
@@ -409,12 +423,14 @@ const WorksPortfolio = () => {
 
               {/* Grid Size */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">รูปแบบแสดงผล</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">รูปแบบแสดงผล</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setGridSize(2)}
-                    className={`flex-1 p-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                      gridSize === 2 ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    className={`flex-1 p-2 rounded-lg transition-colors flex items-center justify-center gap-2 border ${
+                      gridSize === 2 
+                        ? 'bg-blue-600 text-white shadow-md border-blue-500' 
+                        : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border-slate-600'
                     }`}
                   >
                     <Grid2X2 size={16} />
@@ -422,8 +438,10 @@ const WorksPortfolio = () => {
                   </button>
                   <button
                     onClick={() => setGridSize(3)}
-                    className={`flex-1 p-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                      gridSize === 3 ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    className={`flex-1 p-2 rounded-lg transition-colors flex items-center justify-center gap-2 border ${
+                      gridSize === 3 
+                        ? 'bg-blue-600 text-white shadow-md border-blue-500' 
+                        : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border-slate-600'
                     }`}
                   >
                     <Grid3X3 size={16} />
@@ -434,10 +452,10 @@ const WorksPortfolio = () => {
 
               {/* Reset Button */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">รีเซ็ตตัวกรอง</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">รีเซ็ตตัวกรอง</label>
                 <button
                   onClick={resetFilters}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-lg transition-all duration-300 shadow-md flex items-center justify-center gap-2"
+                  className="w-full px-4 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white rounded-lg transition-all duration-300 shadow-lg flex items-center justify-center gap-2 border border-rose-500"
                 >
                   <RefreshCw size={16} />
                   รีเซ็ต
@@ -472,7 +490,7 @@ const WorksPortfolio = () => {
                 <button
                   onClick={loadMoreWorks}
                   disabled={loadingMore}
-                  className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 text-white font-medium rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-medium rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:hover:scale-100 flex items-center gap-2 border border-blue-500"
                 >
                   {loadingMore ? (
                     <>
@@ -493,19 +511,19 @@ const WorksPortfolio = () => {
             {!hasMore && works.length > 0 && (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🎉</div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">คุณได้ดูผลงานทั้งหมดแล้ว</h3>
-                <p className="text-gray-600">ทั้งหมด {totalCount.toLocaleString()} รายการ</p>
+                <h3 className="text-xl font-semibold text-slate-100 mb-2">คุณได้ดูผลงานทั้งหมดแล้ว</h3>
+                <p className="text-slate-400">ทั้งหมด {totalCount.toLocaleString()} รายการ</p>
               </div>
             )}
           </>
         ) : (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">ไม่พบผลงานที่ค้นหา</h3>
-            <p className="text-gray-600 mb-6">ลองเปลี่ยนคำค้นหาหรือตัวกรองใหม่</p>
+            <h3 className="text-xl font-semibold text-slate-100 mb-2">ไม่พบผลงานที่ค้นหา</h3>
+            <p className="text-slate-400 mb-6">ลองเปลี่ยนคำค้นหาหรือตัวกรองใหม่</p>
             <button
               onClick={resetFilters}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-300 shadow-md flex items-center gap-2 mx-auto"
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 shadow-lg flex items-center gap-2 mx-auto border border-blue-500"
             >
               <RefreshCw size={16} />
               รีเซ็ตตัวกรอง

@@ -1,6 +1,6 @@
 const db = require('../db');
 
-// Get works with filtering, pagination, search, and sorting
+
 exports.getWorksHome = async (req, res) => {
   try {
     const {
@@ -9,12 +9,11 @@ exports.getWorksHome = async (req, res) => {
       category,
       subcategory,
       search,
-      sort = 'latest' // latest, oldest, custom_only, sample_only, category_asc, category_desc
+      sort = 'latest'
     } = req.query;
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    
-    // Build WHERE conditions
+
     let whereConditions = [];
     let queryParams = [];
 
@@ -38,7 +37,6 @@ exports.getWorksHome = async (req, res) => {
       ? `WHERE ${whereConditions.join(' AND ')}` 
       : '';
 
-    // Build ORDER BY clause based on sort parameter
     let orderByClause = '';
     switch (sort) {
       case 'latest':
@@ -65,12 +63,10 @@ exports.getWorksHome = async (req, res) => {
         orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
     }
 
-    // Rebuild WHERE clause if sort added conditions
     const finalWhereClause = whereConditions.length > 0 
       ? `WHERE ${whereConditions.join(' AND ')}` 
       : '';
 
-    // Count total works for pagination
     const countQuery = `
       SELECT COUNT(*) as count 
       FROM Works w
@@ -82,16 +78,12 @@ exports.getWorksHome = async (req, res) => {
     const [countResult] = await db.query(countQuery, queryParams);
     const totalWorks = countResult[0].count;
 
-    // Get works with pagination and sorting
     const worksQuery = `
       SELECT 
         w.id,
         w.name,
         w.main_description,
         w.sub_description,
-        w.cover_image,
-        w.secondary_images,
-        w.secondary_assets,
         w.main_category_id,
         w.subcategory_id,
         w.product_reference_id,
@@ -99,31 +91,26 @@ exports.getWorksHome = async (req, res) => {
         w.is_sample,
         w.created_at,
         COALESCE(c.name, 'ไม่ระบุหมวดหมู่') as category_name,
-        COALESCE(s.name, 'ไม่ระบุหมวดหมู่ย่อย') as subcategory_name
+        COALESCE(s.name, 'ไม่ระบุหมวดหมู่ย่อย') as subcategory_name,
+        wi.image_path AS cover_image
       FROM Works w
       LEFT JOIN Categories c ON w.main_category_id = c.id
       LEFT JOIN subcategories s ON w.subcategory_id = s.id
+      LEFT JOIN WorksImages wi ON wi.work_id = w.id AND wi.is_main = true
       ${finalWhereClause}
       ${orderByClause}
       LIMIT ? OFFSET ?
     `;
 
-    // Add limit and offset to query params
     const finalQueryParams = [...queryParams, parseInt(limit), offset];
     const [works] = await db.query(worksQuery, finalQueryParams);
 
-    // Process works data
     const processedWorks = works.map(work => ({
       ...work,
-      secondary_images: work.secondary_images ? 
-        (typeof work.secondary_images === 'string' ? JSON.parse(work.secondary_images) : work.secondary_images) : [],
-      secondary_assets: work.secondary_assets ? 
-        (typeof work.secondary_assets === 'string' ? JSON.parse(work.secondary_assets) : work.secondary_assets) : [],
       is_custom: Boolean(work.is_custom),
       is_sample: Boolean(work.is_sample)
     }));
 
-    // Calculate pagination info
     const totalPages = Math.ceil(totalWorks / parseInt(limit));
     const hasMore = parseInt(page) < totalPages;
 
@@ -172,7 +159,6 @@ exports.getCategoriesHome = async (req, res) => {
 
     const [rows] = await db.query(query);
 
-    // Calculate total count for "all" option
     const totalCount = rows.reduce((sum, row) => sum + parseInt(row.count || 0), 0);
 
     const categories = [
@@ -202,7 +188,6 @@ exports.getCategoriesHome = async (req, res) => {
   }
 };
 
-// Get subcategories with work counts
 exports.getSubcategoriesHome = async (req, res) => {
   try {
     const query = `
@@ -220,7 +205,6 @@ exports.getSubcategoriesHome = async (req, res) => {
 
     const [rows] = await db.query(query);
 
-    // Calculate total count for "all" option
     const totalCount = rows.reduce((sum, row) => sum + parseInt(row.count || 0), 0);
 
     const subcategories = [
@@ -252,7 +236,6 @@ exports.getSubcategoriesHome = async (req, res) => {
   }
 };
 
-// Get subcategories by category (for dynamic filtering)
 exports.getSubcategoriesByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
@@ -308,19 +291,16 @@ exports.getSubcategoriesByCategory = async (req, res) => {
   }
 };
 
-// Get single work details
 exports.getWorkById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const query = `
+    const workQuery = `
       SELECT 
         w.id,
         w.name,
         w.main_description,
         w.sub_description,
-        w.cover_image,
-        w.secondary_images,
         w.secondary_assets,
         w.main_category_id,
         w.subcategory_id,
@@ -336,7 +316,7 @@ exports.getWorkById = async (req, res) => {
       WHERE w.id = ?
     `;
 
-    const [works] = await db.query(query, [id]);
+    const [works] = await db.query(workQuery, [id]);
 
     if (works.length === 0) {
       return res.status(404).json({ 
@@ -345,17 +325,28 @@ exports.getWorkById = async (req, res) => {
       });
     }
 
-    const work = {
-      ...works[0],
-      secondary_images: works[0].secondary_images ? 
-        (typeof works[0].secondary_images === 'string' ? JSON.parse(works[0].secondary_images) : works[0].secondary_images) : [],
-      secondary_assets: works[0].secondary_assets ? 
-        (typeof works[0].secondary_assets === 'string' ? JSON.parse(works[0].secondary_assets) : works[0].secondary_assets) : [],
-      is_custom: Boolean(works[0].is_custom),
-      is_sample: Boolean(works[0].is_sample)
-    };
+    const work = works[0];
 
-    res.json(work);
+    const imagesQuery = `
+      SELECT image_path, is_main
+      FROM WorksImages
+      WHERE work_id = ?
+    `;
+
+    const [images] = await db.query(imagesQuery, [id]);
+
+    const cover_image = images.find(img => img.is_main)?.image_path || null;
+    const secondary_images = images.filter(img => !img.is_main).map(img => img.image_path);
+
+    res.json({
+      ...work,
+      cover_image,
+      secondary_images,
+      secondary_assets: work.secondary_assets ? 
+        (typeof work.secondary_assets === 'string' ? JSON.parse(work.secondary_assets) : work.secondary_assets) : [],
+      is_custom: Boolean(work.is_custom),
+      is_sample: Boolean(work.is_sample)
+    });
 
   } catch (error) {
     console.error('Error fetching work by ID:', error);
@@ -367,17 +358,15 @@ exports.getWorkById = async (req, res) => {
   }
 };
 
-// Get featured/recent works for homepage
 exports.getFeaturedWorks = async (req, res) => {
   try {
     const { limit = 8 } = req.query;
 
-    const query = `
+    const worksQuery = `
       SELECT 
         w.id,
         w.name,
         w.main_description,
-        w.cover_image,
         w.main_category_id,
         w.is_custom,
         w.is_sample,
@@ -389,15 +378,24 @@ exports.getFeaturedWorks = async (req, res) => {
       LIMIT ?
     `;
 
-    const [works] = await db.query(query, [parseInt(limit)]);
+    const [works] = await db.query(worksQuery, [parseInt(limit)]);
 
-    const processedWorks = works.map(work => ({
-      ...work,
-      is_custom: Boolean(work.is_custom),
-      is_sample: Boolean(work.is_sample)
-    }));
+    const worksWithImages = await Promise.all(
+      works.map(async (work) => {
+        const [images] = await db.query(
+          `SELECT image_path FROM WorksImages WHERE work_id = ? AND is_main = true LIMIT 1`,
+          [work.id]
+        );
+        return {
+          ...work,
+          cover_image: images[0]?.image_path || null,
+          is_custom: Boolean(work.is_custom),
+          is_sample: Boolean(work.is_sample)
+        };
+      })
+    );
 
-    res.json(processedWorks);
+    res.json(worksWithImages);
 
   } catch (error) {
     console.error('Error fetching featured works:', error);
@@ -409,7 +407,6 @@ exports.getFeaturedWorks = async (req, res) => {
   }
 };
 
-// Get works statistics
 exports.getWorksStats = async (req, res) => {
   try {
     const queries = {

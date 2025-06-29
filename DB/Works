@@ -3,9 +3,6 @@ CREATE TABLE Works (
   name VARCHAR(255) NOT NULL,
   main_description TEXT NOT NULL,
   sub_description TEXT,
-  cover_image VARCHAR(255), -- ภาพผลงานหลัก
-  secondary_images JSON,    -- ภาพผลงานย่อย
-  secondary_assets JSON,    -- ภาพรอง เช่น โลโก้ลูกค้า, mockup เพิ่มเติม
   main_category_id INT NOT NULL,
   subcategory_id INT NOT NULL,
   product_reference_id INT, -- อ้างอิงสินค้าที่ใช้ในงาน
@@ -13,6 +10,15 @@ CREATE TABLE Works (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   is_sample BOOLEAN DEFAULT FALSE,
   FOREIGN KEY (main_category_id) REFERENCES Categories(id),
-  FOREIGN KEY (subcategory_id) REFERENCES secondary_assetsubcategories(id),
+  FOREIGN KEY (subcategory_id) REFERENCES subcategories(id),
   FOREIGN KEY (product_reference_id) REFERENCES Products(id)
+);
+
+CREATE TABLE WorksImages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  work_id INT NOT NULL,
+  image_path VARCHAR(255) NOT NULL,
+  is_main BOOLEAN DEFAULT FALSE, -- TRUE ถ้าเป็นภาพหลัก
+  display_order INT DEFAULT 0,   -- ใช้จัดเรียงภาพ
+  FOREIGN KEY (work_id) REFERENCES Works(id) ON DELETE CASCADE
 );

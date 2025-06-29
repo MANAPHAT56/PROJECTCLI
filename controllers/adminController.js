@@ -136,7 +136,7 @@ exports.getCategories=async (req,res)=>{
   name,
   icon,
   gradient,
-  image_path AS image_path
+  description
 FROM Categories
 ORDER BY id ASC;
 `);
@@ -158,3 +158,262 @@ ORDER BY id ASC;
 res.json({subcategories:subcategories})
 }
 
+exports.deleteProduct = async(req,res)=>{
+    const { productId } = req.params;
+ 
+  try {
+    // ลบจาก Products — รูปภาพจะลบอัตโนมัติเพราะมี ON DELETE CASCADE
+    const [result] = await db.query('DELETE FROM Products WHERE id = ?', [productId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'ไม่พบสินค้าเพื่อทำการลบ' });
+    }
+
+    res.json({ message: 'ลบสินค้าสำเร็จ' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการลบสินค้า' });
+  }
+}
+exports.InsertNewCategory = async (req, res) => {
+    const categoryData = req.body;
+    // No numeric conversions needed for categories based on your schema
+
+    // Default values if not provided from frontend (adjust as needed)
+    categoryData.image_path = categoryData.image_path || null;
+    categoryData.description = categoryData.description || null;
+    categoryData.icon = categoryData.icon || 'default-icon'; // Ensure icon is provided
+    categoryData.gradient = categoryData.gradient || 'from-purple-600 to-blue-600';
+
+    const query = `
+        INSERT INTO Categories (
+            name,
+            image_path,
+            description,
+            icon,
+            gradient
+        ) VALUES (?, ?, ?, ?, ?);
+    `;
+    const values = [
+        categoryData.name,
+        categoryData.image_path,
+        categoryData.description,
+        categoryData.icon,
+        categoryData.gradient
+    ];
+
+    try {
+        const [result] = await db.query(query, values);
+        const newCategoryId = result.insertId;
+        res.status(201).json({
+            success: true,
+            message: 'เพิ่มหมวดหมู่สำเร็จ',
+            categoryId: newCategoryId// Return the complete new category object
+        });
+    } catch (error) {
+        console.error('Error inserting category:', error);
+        if (error.code === 'ER_DUP_ENTRY') { // MySQL error code for duplicate unique key
+            return res.status(409).json({ success: false, message: 'ชื่อหมวดหมู่นี้มีอยู่แล้ว' });
+        }
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการเพิ่มหมวดหมู่' });
+    }
+};
+exports.EditCategory = async (req, res) => {
+    const { categoryId } = req.params;
+    const categoryData = req.body;
+
+    // Default values if not provided from frontend (adjust as needed)
+    categoryData.image_path = categoryData.image_path || null;
+    categoryData.description = categoryData.description || null;
+    categoryData.icon = categoryData.icon || 'default-icon'; // Ensure icon is provided
+    categoryData.gradient = categoryData.gradient || 'from-purple-600 to-blue-600';
+
+    const query = `
+        UPDATE Categories
+        SET
+            name = ?,
+            image_path = ?,
+            description = ?,
+            icon = ?,
+            gradient = ?
+        WHERE id = ?;
+    `;
+    const values = [
+        categoryData.name,
+        categoryData.image_path,
+        categoryData.description,
+        categoryData.icon,
+        categoryData.gradient,
+        categoryId
+    ];
+
+    try {
+        const [result] = await db.query(query, values);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'ไม่พบหมวดหมู่เพื่อทำการแก้ไข หรือไม่มีการเปลี่ยนแปลงข้อมูล' });
+        }
+
+        // Optional: Fetch the updated category to return its complete data
+       
+
+        res.json({ success: true, message: 'แก้ไขหมวดหมู่สำเร็จ'});
+    } catch (error) {
+        console.error('Error editing category:', error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, message: 'ชื่อหมวดหมู่นี้มีอยู่แล้ว' });
+        }
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขหมวดหมู่' });
+    }
+};
+exports.DeleteCategory = async (req, res) => {
+    const { categoryId } = req.params;
+
+    try {
+        const [result] = await db.query('DELETE FROM Categories WHERE id = ?', [categoryId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'ไม่พบหมวดหมู่เพื่อทำการลบ' });
+        }
+
+        res.json({ success: true, message: 'ลบหมวดหมู่สำเร็จ' });
+    } catch (error) {
+        console.error('Error deleting category:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบหมวดหมู่' });
+    }
+};
+//
+exports.InsertNewSubcategory = async (req, res) => {
+    const subcategoryData = req.body;
+
+    // Validate and convert numeric fields
+    subcategoryData.category_id = parseInt(subcategoryData.category_id);
+
+    // Default values if not provided from frontend (adjust as needed)
+    subcategoryData.description = subcategoryData.description || null;
+    subcategoryData.image_path = subcategoryData.image_path || null;
+    subcategoryData.icon = subcategoryData.icon || null;
+    subcategoryData.gradient = subcategoryData.gradient || 'from-purple-600 to-blue-600';
+    subcategoryData.bgGradient = subcategoryData.bgGradient || 'from-purple-600 to-blue-600';
+    subcategoryData.accentColor = subcategoryData.accentColor || '#FFFFFF';
+
+    // Basic validation
+    if (isNaN(subcategoryData.category_id) || !subcategoryData.name) {
+        return res.status(400).json({ success: false, message: 'ข้อมูลไม่ถูกต้อง: ต้องมีชื่อและ Category ID' });
+    }
+
+    const query = `
+        INSERT INTO subcategories (
+            name,
+            description,
+            image_path,
+            category_id,
+            icon,
+            gradient,
+            bgGradient,
+            accentColor
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+    `;
+    const values = [
+        subcategoryData.name,
+        subcategoryData.description,
+        subcategoryData.image_path,
+        subcategoryData.category_id,
+        subcategoryData.icon,
+        subcategoryData.gradient,
+        subcategoryData.bgGradient,
+        subcategoryData.accentColor
+    ];
+
+    try {
+        const [result] = await db.query(query, values);
+        const newSubcategoryId = result.insertId;
+        res.status(201).json({
+            success: true,
+            message: 'เพิ่มหมวดหมู่ย่อยสำเร็จ',
+            subcategoryId: newSubcategoryId // Return the complete new subcategory object
+        });
+    } catch (error) {
+        console.error('Error inserting subcategory:', error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, message: 'ชื่อหมวดหมู่ย่อยนี้มีอยู่แล้วในหมวดหมู่หลักนี้' });
+        }
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการเพิ่มหมวดหมู่ย่อย' });
+    }
+};
+exports.EditSubcategory = async (req, res) => {
+    const { subcategoryId } = req.params;
+    const subcategoryData = req.body;
+
+    // Validate and convert numeric fields
+    // category_id might be updated, so parse it if present
+    if (subcategoryData.category_id !== undefined) {
+        subcategoryData.category_id = parseInt(subcategoryData.category_id);
+    }
+
+    // Default values if not provided from frontend (adjust as needed)
+    subcategoryData.description = subcategoryData.description || null;
+    subcategoryData.image_path = subcategoryData.image_path || null;
+    subcategoryData.icon = subcategoryData.icon || null;
+    subcategoryData.gradient = subcategoryData.gradient || 'from-purple-600 to-blue-600';
+    subcategoryData.bgGradient = subcategoryData.bgGradient || 'from-purple-600 to-blue-600';
+    subcategoryData.accentColor = subcategoryData.accentColor || '#FFFFFF';
+
+
+    const query = `
+        UPDATE subcategories
+        SET
+            name = ?,
+            description = ?,
+            image_path = ?,
+            category_id = ?,
+            icon = ?,
+            gradient = ?,
+            bgGradient = ?,
+            accentColor = ?
+        WHERE id = ?;
+    `;
+    const values = [
+        subcategoryData.name,
+        subcategoryData.description,
+        subcategoryData.image_path,
+        subcategoryData.category_id,
+        subcategoryData.icon,
+        subcategoryData.gradient,
+        subcategoryData.bgGradient,
+        subcategoryData.accentColor,
+        subcategoryId
+    ];
+
+    try {
+        const [result] = await db.query(query, values);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'ไม่พบหมวดหมู่ย่อยเพื่อทำการแก้ไข หรือไม่มีการเปลี่ยนแปลงข้อมูล' });
+        }
+
+        res.json({ success: true, message: 'แก้ไขหมวดหมู่ย่อยสำเร็จ'});
+    } catch (error) {
+        console.error('Error editing subcategory:', error);
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, message: 'ชื่อหมวดหมู่ย่อยนี้มีอยู่แล้วในหมวดหมู่หลักนี้' });
+        }
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขหมวดหมู่ย่อย' });
+    }
+};
+exports.DeleteSubcategory = async (req, res) => {
+    const { subcategoryId } = req.params;
+
+    try {
+        const [result] = await db.query('DELETE FROM subcategories WHERE id = ?', [subcategoryId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'ไม่พบหมวดหมู่ย่อยเพื่อทำการลบ' });
+        }
+
+        res.json({ success: true, message: 'ลบหมวดหมู่ย่อยสำเร็จ' });
+    } catch (error) {
+        console.error('Error deleting subcategory:', error);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบหมวดหมู่ย่อย' });
+    }
+};
