@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Heart, Share2, Download, ExternalLink, Calendar, Tag, Package,
   Zap, Palette, Eye, Bookmark, ImageIcon, Layers, Star, Clock, ChevronLeft,
-  ChevronRight, ZoomIn, X, Info, CheckCircle, AlertCircle, FileText, Grid3X3
+  ChevronRight, ZoomIn, X, Info, CheckCircle, AlertCircle, FileText, Grid3X3,
+  ShoppingBag, ArrowRight, MoreHorizontal
 } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+
 const WorksDetail = () => {
   const [work, setWork] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,14 +14,16 @@ const WorksDetail = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showImageModal, setShowImageModal] = useState(false);
   const [relatedWorks, setRelatedWorks] = useState([]);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   const [stats, setStats] = useState({ total: 1250, custom: 450, samples: 800, categories: 12 });
   const [isFavorite, setIsFavorite] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
-
+  const [imageGalleryStartIndex, setImageGalleryStartIndex] = useState(0);
   const {workId} = useParams();
   const API_BASE_URL = 'http://localhost:5000/api/works';
-
+  // Mock data for demonstration
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -69,16 +73,35 @@ const WorksDetail = () => {
   };
 
   const handleImageNavigation = (direction) => {
-    if (!work) return;
-    const allImages = getAllImages();
-    const totalImages = allImages.length;
-    setCurrentImageIndex(prev => direction === 'next' ? (prev + 1) % totalImages : (prev - 1 + totalImages) % totalImages);
+    if (!work || !work.images) return;
+    const totalImages = work.images.length;
+    setCurrentImageIndex(prev => 
+      direction === 'next' ? (prev + 1) % totalImages : (prev - 1 + totalImages) % totalImages
+    );
+  };
+
+  const handleGalleryNavigation = (direction) => {
+    if (!work || !work.images) return;
+    const visibleCount = 8;
+    const maxStart = Math.max(0, work.images.length - visibleCount);
+    
+    setImageGalleryStartIndex(prev => {
+      if (direction === 'next') {
+        return Math.min(prev + visibleCount, maxStart);
+      } else {
+        return Math.max(prev - visibleCount, 0);
+      }
+    });
   };
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: work?.name, text: work?.main_description, url: window.location.href });
+        await navigator.share({ 
+          title: work?.name, 
+          text: work?.main_description, 
+          url: window.location.href 
+        });
       } catch (error) {
         console.log('Error sharing:', error);
       }
@@ -111,10 +134,16 @@ const WorksDetail = () => {
         <h3 className="text-xl font-semibold text-gray-800 mb-2">ไม่สามารถโหลดข้อมูลได้</h3>
         <p className="text-gray-600 mb-6">{error}</p>
         <div className="flex gap-3 justify-center">
-          <button onClick={() => window.history.back()} className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-colors flex items-center gap-2">
+          <button 
+            onClick={() => window.history.back()} 
+            className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-colors flex items-center gap-2"
+          >
             <ArrowLeft size={16} /> กลับหน้าก่อน
           </button>
-          <button onClick={() => window.location.reload()} className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all duration-300 shadow-lg">
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition-all duration-300 shadow-lg"
+          >
             ลองใหม่
           </button>
         </div>
@@ -133,14 +162,14 @@ const WorksDetail = () => {
     </div>
   );
 
-  const allImages = getAllImages();
+  const allImages = work.images || [];
   const currentImage = allImages[currentImageIndex] || 'https://picsum.photos/800/600?random=default';
-  const secondaryAssets = work.secondary_assets || [];
+  const visibleImages = allImages.slice(imageGalleryStartIndex, imageGalleryStartIndex + 8);
 
   const tabs = [
     { id: 'overview', label: 'ภาพรวม', icon: Info },
     { id: 'details', label: 'รายละเอียด', icon: FileText },
-    { id: 'assets', label: 'ไฟล์แนบ', icon: Layers }
+    { id: 'gallery', label: 'แกลเลอรี่', icon: ImageIcon }
   ];
 
   return (
@@ -149,7 +178,10 @@ const WorksDetail = () => {
       <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <button onClick={() => window.history.back()} className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors shadow-sm border border-gray-200">
+            <button 
+              onClick={() => window.history.back()} 
+              className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-xl transition-colors shadow-sm border border-gray-200"
+            >
               <ArrowLeft size={16} />
               <span className="hidden sm:inline">กลับหน้าก่อน</span>
             </button>
@@ -161,11 +193,16 @@ const WorksDetail = () => {
               ].map((btn, idx) => {
                 const Icon = btn.icon;
                 return (
-                  <button key={idx} onClick={btn.action} className={`p-3 rounded-xl transition-all duration-300 shadow-sm ${
-                    btn.active ? `bg-${btn.colors}-50 text-${btn.colors}-500 border border-${btn.colors}-200` : 
-                    `bg-white hover:bg-${btn.colors}-50 text-gray-600 border border-gray-200`
-                  }`}>
-                    <Icon size={18} className={btn.active && btn.icon === Heart || btn.active && btn.icon === Bookmark ? 'fill-current' : ''} />
+                  <button 
+                    key={idx} 
+                    onClick={btn.action} 
+                    className={`p-3 rounded-xl transition-all duration-300 shadow-sm ${
+                      btn.active 
+                        ? `bg-red-50 text-red-500 border border-red-200` 
+                        : `bg-white hover:bg-gray-50 text-gray-600 border border-gray-200`
+                    }`}
+                  >
+                    <Icon size={18} className={btn.active && (btn.icon === Heart || btn.icon === Bookmark) ? 'fill-current' : ''} />
                   </button>
                 );
               })}
@@ -178,23 +215,33 @@ const WorksDetail = () => {
       {showImageModal && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
           <div className="relative max-w-4xl max-h-full">
-            <button onClick={() => setShowImageModal(false)} className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 text-white rounded-full transition-colors z-10">
+            <button 
+              onClick={() => setShowImageModal(false)} 
+              className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 text-white rounded-full transition-colors z-10"
+            >
               <X size={20} />
             </button>
-            <img src={currentImage} alt={work.name} className="max-w-full max-h-full object-contain rounded-lg" />
+            <img 
+              src={currentImage} 
+              alt={work.name} 
+              className="max-w-full max-h-full object-contain rounded-lg" 
+            />
           </div>
         </div>
       )}
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column */}
-          <div className="lg:col-span-2">
-            {/* Main Image */}
-            <div className="bg-white rounded-2xl overflow-hidden shadow-lg mb-6">
+        {/* Work Header */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg mb-8">
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="lg:w-1/2">
               <div className="relative">
-                <img src={currentImage} alt={work.name} className="w-full h-96 sm:h-[500px] object-cover cursor-zoom-in"
-                  onClick={() => setShowImageModal(true)} onError={(e) => { e.target.src = 'https://picsum.photos/800/600?random=error'; }} />
+                <img 
+                  src={currentImage} 
+                  alt={work.name} 
+                  className="w-full h-80 object-cover rounded-xl cursor-zoom-in"
+                  onClick={() => setShowImageModal(true)} 
+                />
                 
                 {/* Badges */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -210,13 +257,19 @@ const WorksDetail = () => {
                   )}
                 </div>
 
-                {/* Navigation & Controls */}
+                {/* Navigation */}
                 {allImages.length > 1 && (
                   <>
-                    <button onClick={() => handleImageNavigation('prev')} className="absolute left-4 top-1/2 transform -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-300 backdrop-blur-sm">
+                    <button 
+                      onClick={() => handleImageNavigation('prev')} 
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-300 backdrop-blur-sm"
+                    >
                       <ChevronLeft size={20} />
                     </button>
-                    <button onClick={() => handleImageNavigation('next')} className="absolute right-4 top-1/2 transform -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-300 backdrop-blur-sm">
+                    <button 
+                      onClick={() => handleImageNavigation('next')} 
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-300 backdrop-blur-sm"
+                    >
                       <ChevronRight size={20} />
                     </button>
                     <div className="absolute bottom-4 left-4 px-3 py-1 bg-black/50 text-white text-sm rounded-full backdrop-blur-sm">
@@ -225,144 +278,44 @@ const WorksDetail = () => {
                   </>
                 )}
                 
-                <button onClick={() => setShowImageModal(true)} className="absolute bottom-4 right-4 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-300 backdrop-blur-sm">
+                <button 
+                  onClick={() => setShowImageModal(true)} 
+                  className="absolute bottom-4 right-4 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-300 backdrop-blur-sm"
+                >
                   <ZoomIn size={18} />
                 </button>
               </div>
             </div>
 
-            {/* Thumbnails */}
-            {allImages.length > 1 && (
-              <div className="bg-white rounded-2xl p-4 shadow-lg mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <ImageIcon size={18} className="text-blue-500" />
-                  ภาพทั้งหมด ({allImages.length})
-                </h3>
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                  {allImages.map((image, index) => (
-                    <button key={index} onClick={() => setCurrentImageIndex(index)} className={`relative aspect-square rounded-lg overflow-hidden transition-all duration-300 ${
-                      currentImageIndex === index ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-105 hover:shadow-md'
-                    }`}>
-                      <img src={image || `https://picsum.photos/100/100?random=${index}`} alt={`${work.name} - ${index + 1}`} className="w-full h-full object-cover" />
-                      {currentImageIndex === index && (
-                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                          <CheckCircle className="text-blue-500" size={16} />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tabs Content */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="border-b border-gray-200">
-                <div className="flex">
-                  {tabs.map((tab) => {
-                    const Icon = tab.icon;
-                    return (
-                      <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                        activeTab === tab.id ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                      }`}>
-                        <Icon size={16} /> {tab.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="p-6">
-                {activeTab === 'overview' && (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800 mb-2">คำอธิบายหลัก</h3>
-                      <p className="text-gray-700 leading-relaxed">{work.main_description}</p>
-                    </div>
-                    {work.sub_description && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">คำอธิบายเพิ่มเติม</h3>
-                        <p className="text-gray-600 leading-relaxed">{work.sub_description}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'details' && (
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    {[
-                      { icon: Calendar, label: 'วันที่สร้าง', value: new Date(work.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }), color: 'blue' },
-                      { icon: Tag, label: 'หมวดหมู่', value: work.category_name || 'ไม่ระบุ', color: 'green' },
-                      work.subcategory_name && { icon: Grid3X3, label: 'หมวดหมู่ย่อย', value: work.subcategory_name, color: 'purple' },
-                      work.product_reference_id && { icon: Package, label: 'รหัสสินค้าอ้างอิง', value: work.product_reference_id, color: 'orange' }
-                    ].filter(Boolean).map((item, idx) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                          <Icon className={`text-${item.color}-500`} size={18} />
-                          <div>
-                            <p className="text-sm text-gray-600">{item.label}</p>
-                            <p className="font-medium text-gray-800">{item.value}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {activeTab === 'assets' && (
-                  <div>
-                    {secondaryAssets.length > 0 ? (
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        {secondaryAssets.map((asset, index) => (
-                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <FileText className="text-blue-600" size={18} />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-800">{asset.name || `ไฟล์ ${index + 1}`}</p>
-                              <p className="text-sm text-gray-600">{asset.type || 'ไฟล์แนบ'}</p>
-                            </div>
-                            <button className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
-                              <Download size={16} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center text-gray-500 py-8">
-                        <Layers size={48} className="mx-auto mb-3 text-gray-300" />
-                        <p>ไม่มีไฟล์แนบเพิ่มเติม</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            {/* Work Info */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 leading-tight">{work.name}</h1>
+            <div className="lg:w-1/2">
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">{work.name}</h1>
               
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Clock size={16} />
-                  <span className="text-sm">สร้างเมื่อ {new Date(work.created_at).toLocaleDateString('th-TH')}</span>
+                  <Calendar size={16} />
+                  <span>สร้างเมื่อ {new Date(work.created_at).toLocaleDateString('th-TH', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}</span>
                 </div>
-                {work.category_name && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Tag size={16} />
+                  <span>{work.category_name}</span>
+                  {work.subcategory_name && <span className="text-gray-400">• {work.subcategory_name}</span>}
+                </div>
+                {work.product_reference_id && (
                   <div className="flex items-center gap-2 text-gray-600">
-                    <Tag size={16} />
-                    <span className="text-sm">{work.category_name}</span>
-                    {work.subcategory_name && <span className="text-gray-400">• {work.subcategory_name}</span>}
+                    <Package size={16} />
+                    <span>รหัสสินค้าอ้างอิง: {work.product_reference_id}</span>
                   </div>
                 )}
               </div>
+
+              <p className="text-gray-700 leading-relaxed mb-6">{work.main_description}</p>
 
               <div className="space-y-3">
-                <button className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2">
+                <button className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
                   <Eye size={18} /> ดูรายละเอียดเต็ม
                 </button>
                 <div className="grid grid-cols-2 gap-3">
@@ -375,52 +328,178 @@ const WorksDetail = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Statistics */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Star className="text-yellow-500" size={18} /> สถิติผลงาน
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { value: stats.total, label: 'ผลงานทั้งหมด', color: 'blue' },
-                  { value: stats.custom, label: 'งานสั่งทำ', color: 'purple' },
-                  { value: stats.samples, label: 'งานตัวอย่าง', color: 'green' },
-                  { value: stats.categories, label: 'หมวดหมู่', color: 'orange' }
-                ].map((stat, idx) => (
-                  <div key={idx} className={`text-center p-3 bg-${stat.color}-50 rounded-xl`}>
-                    <p className={`text-2xl font-bold text-${stat.color}-600`}>{stat.value?.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
+        {/* Image Gallery Section */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <ImageIcon className="text-blue-500" size={24} />
+              แกลเลอรี่ภาพผลงาน
+            </h2>
+            <span className="text-gray-600 text-sm">
+              {allImages.length} ภาพ
+            </span>
+          </div>
+
+          {/* Image Grid */}
+          <div className="relative">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              {visibleImages.map((image, index) => {
+                const actualIndex = imageGalleryStartIndex + index;
+                return (
+                  <button
+                    key={actualIndex}
+                    onClick={() => setCurrentImageIndex(actualIndex)}
+                    className={`relative aspect-square rounded-lg overflow-hidden transition-all duration-300 ${
+                      currentImageIndex === actualIndex 
+                        ? 'ring-2 ring-blue-500 shadow-lg scale-105' 
+                        : 'hover:scale-105 hover:shadow-md'
+                    }`}
+                  >
+                    <img 
+                      src={image} 
+                      alt={`${work.name} - ${actualIndex + 1}`} 
+                      className="w-full h-full object-cover" 
+                    />
+                    {currentImageIndex === actualIndex && (
+                      <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
+                        <CheckCircle className="text-blue-500" size={20} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Related Works */}
-            {relatedWorks.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-lg">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Grid3X3 className="text-blue-500" size={18} /> ผลงานที่เกี่ยวข้อง
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {relatedWorks.slice(0, 4).map((relatedWork) => (
-                    <button key={relatedWork.id} className="group text-left border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-300 hover:border-blue-300"
-                      onClick={() => {
-                        const params = new URLSearchParams(window.location.search);
-                        params.set('id', relatedWork.id);
-                        window.location.search = params.toString();
-                      }}>
-                      <img src={relatedWork.cover_image || `https://picsum.photos/150/100?random=${relatedWork.id}`} alt={relatedWork.name} 
-                        className="w-full h-20 object-cover group-hover:scale-105 transition-transform duration-300" />
-                      <div className="p-3">
-                        <p className="text-sm font-medium text-gray-800 line-clamp-2">{relatedWork.name}</p>
-                        <p className="text-xs text-gray-500 mt-1">{relatedWork.category_name}</p>
-                      </div>
-                    </button>
+            {/* Gallery Navigation */}
+            {allImages.length > 8 && (
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => handleGalleryNavigation('prev')}
+                  disabled={imageGalleryStartIndex === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  <ChevronLeft size={16} />
+                  <span className="hidden sm:inline">ก่อนหน้า</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.ceil(allImages.length / 8) }, (_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setImageGalleryStartIndex(i * 8)}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        Math.floor(imageGalleryStartIndex / 8) === i 
+                          ? 'bg-blue-500' 
+                          : 'bg-gray-300'
+                      }`}
+                    />
                   ))}
                 </div>
+                <button
+                  onClick={() => handleGalleryNavigation('next')}
+                  disabled={imageGalleryStartIndex + 8 >= allImages.length}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  <span className="hidden sm:inline">ถัดไป</span>
+                  <ChevronRight size={16} />
+                </button>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Additional Description */}
+        {work.sub_description && (
+          <div className="bg-white rounded-2xl p-6 shadow-lg mb-8">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">รายละเอียดเพิ่มเติม</h3>
+            <p className="text-gray-700 leading-relaxed">{work.sub_description}</p>
+          </div>
+        )}
+
+        {/* Related Works Section */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Grid3X3 className="text-blue-500" size={24} />
+              ผลงานที่เกี่ยวข้อง
+            </h2>
+            <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+              <span>ดูทั้งหมด</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedWorks.slice(0, 8).map((relatedWork) => (
+              <div key={relatedWork.id} className="group cursor-pointer">
+                <div className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:border-blue-300">
+                  <div className="relative">
+                    <img 
+                      src={relatedWork.cover_image} 
+                      alt={relatedWork.name}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{relatedWork.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2">{relatedWork.category_name}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Clock size={12} />
+                      <span>{new Date(relatedWork.created_at).toLocaleDateString('th-TH')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Related Products Section */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <ShoppingBag className="text-green-500" size={24} />
+              สินค้าที่เกี่ยวข้อง
+            </h2>
+            <button className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+              <span>ดูทั้งหมด</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedProducts.slice(0, 8).map((product) => (
+              <div key={product.id} className="group cursor-pointer">
+                <div className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:border-green-300">
+                  <div className="relative">
+                    <img 
+                      src={product.image} 
+                      alt={product.name}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 text-xs flex items-center gap-1">
+                      <Star className="text-yellow-500 fill-current" size={10} />
+                      <span className="text-gray-700">{product.rating}</span>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2">{product.category}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-green-600">
+                        ฿{product.price.toLocaleString()}
+                      </span>
+                      <button className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg transition-colors">
+                        ดูสินค้า
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

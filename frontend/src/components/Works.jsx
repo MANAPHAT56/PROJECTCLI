@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Filter,
@@ -38,6 +39,7 @@ const WorksPortfolio = () => {
   const [page, setPage] = useState(1);
   const [error, setError] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
+  const navigate= useNavigate();
 
   const API_BASE_URL = 'http://localhost:5000/api';
   console.log("rerender")
@@ -53,6 +55,7 @@ const WorksPortfolio = () => {
 
   const handleViewDetails = (workId) => {
     // Navigate to work details page
+    navigate(`/worksDetail/${workId}`);
     console.log(`Viewing work ${workId}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
