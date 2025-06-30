@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, 
+  ChevronLeft,
   ShoppingCart, 
   Heart, 
   Star, 
@@ -19,51 +20,67 @@ import {
   Grid3x3,
   ThumbsUp
 } from 'lucide-react';
-import { useParams,useNavigate } from 'react-router-dom'; 
+// Mock router functions for demo
+const useParams = () => ({ productId: '1' });
+const useNavigate = () => (path) => console.log('Navigate to:', path); 
+
 const SubcategoryProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [productData,setproductData ] = useState({}) ;
-    const [relatedProducts,setproductDataRelated ] = useState({}) ;
-  // const [isFavorite, setIsFavorite] = useState(false);
+  const [relatedProducts,setproductDataRelated ] = useState({}) ;
   const [quantity, setQuantity] = useState(1);
-    const [loading, setLoading] = useState(true);
-  // const [selectedVariant, setSelectedVariant] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [animatedElements, setAnimatedElements] = useState(new Set());
   const [activeTab, setActiveTab] = useState('description');
+  const [thumbnailStartIndex, setThumbnailStartIndex] = useState(0);
+  
   const navigate=useNavigate();
-     const handleViewDetails = (productId) => {
+  
+  const handleViewDetails = (productId) => {
     console.log(productId)
-    // Here you would typically navigate to product details page
     navigate(`/detailProducts/${productId}`)
-     window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-       const { productId } = useParams(); // ✅ ดึงค่าจาก URL
-       console.log(productId);
- useEffect(() => {
+  
+  const { productId } = useParams();
+  console.log(productId);
+  
+  useEffect(() => {
     fetch(`http://localhost:5000/api/store/product/${productId}`)
       .then(res => res.json())
       .then(data => setproductData(data))
       .catch(err => console.error('Error fetching categories:', err));
   }, [productId]);
   
-    useEffect(() => {
-         setTimeout(() => {
+  useEffect(() => {
+    setTimeout(() => {
       setLoading(false);
     }, 500);
-    });
+  });
   
-   useEffect(() => {
+  useEffect(() => {
     fetch(`http://localhost:5000/api/store/RealatedPdeatail/${productId}`)
       .then(res => res.json())
       .then(data => setproductDataRelated(data))
       .catch(err => console.error('Error fetching categories:', err));
   }, [productId]);
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       setAnimatedElements(new Set(['hero', 'gallery', 'info', 'related']));
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+
+  // ฟังก์ชันสำหรับเลื่อน thumbnail
+  const scrollThumbnails = (direction) => {
+    const maxIndex = Math.max(0, productData.images.length - 4);
+    if (direction === 'left') {
+      setThumbnailStartIndex(Math.max(0, thumbnailStartIndex - 1));
+    } else {
+      setThumbnailStartIndex(Math.min(maxIndex, thumbnailStartIndex + 1));
+    }
+  };
 
   const ProductImageGallery = () => (
     <div className={`relative transition-all duration-1000 ${
@@ -97,28 +114,79 @@ const SubcategoryProductDetail = () => {
         </div>
       </div>
 
-      {/* Thumbnail Images */}
-      <div className="grid grid-cols-4 gap-3">
-        {productData.images.map((image, index) => (
-          <button
-            key={index}
-            onClick={() => setSelectedImage(index)}
-            className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
-              selectedImage === index 
-                ? 'ring-4 ring-cyan-400 scale-105 shadow-xl' 
-                : 'hover:scale-105 hover:shadow-lg'
-            }`}
+      {/* Horizontal Thumbnail Slider */}
+      <div className="relative">
+        {/* Left Arrow */}
+        <button
+          onClick={() => scrollThumbnails('left')}
+          disabled={thumbnailStartIndex === 0}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/90 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ${
+            thumbnailStartIndex === 0 
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:bg-white hover:scale-110'
+          }`}
+        >
+          <ChevronLeft size={20} className="text-slate-700" />
+        </button>
+
+        {/* Right Arrow */}
+        <button
+          onClick={() => scrollThumbnails('right')}
+          disabled={thumbnailStartIndex >= Math.max(0, productData.images.length - 4)}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/90 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ${
+            thumbnailStartIndex >= Math.max(0, productData.images.length - 4)
+              ? 'opacity-50 cursor-not-allowed' 
+              : 'hover:bg-white hover:scale-110'
+          }`}
+        >
+          <ChevronRight size={20} className="text-slate-700" />
+        </button>
+
+        {/* Thumbnails Container */}
+        <div className="mx-8 overflow-hidden">
+          <div 
+            className="flex transition-transform duration-300 ease-in-out gap-3"
+            style={{
+              transform: `translateX(-${thumbnailStartIndex * (100 / 4)}%)`
+            }}
           >
-            <img
-              src={image}
-              alt={`View ${index + 1}`}
-              className="w-full h-20 object-cover"
+            {productData.images?.map((image, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedImage(index)}
+                className={`relative rounded-2xl overflow-hidden transition-all duration-300 flex-shrink-0 w-1/4 ${
+                  selectedImage === index 
+                    ? 'ring-4 ring-cyan-400 scale-105 shadow-xl' 
+                    : 'hover:scale-105 hover:shadow-lg'
+                }`}
+              >
+                <img
+                  src={image}
+                  alt={`View ${index + 1}`}
+                  className="w-full h-20 object-cover"
+                />
+                {selectedImage === index && (
+                  <div className="absolute inset-0 bg-cyan-400/20"></div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dots Indicator */}
+        <div className="flex justify-center mt-4 space-x-2">
+          {productData.images?.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedImage(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                selectedImage === index
+                  ? 'bg-cyan-500 w-8'
+                  : 'bg-slate-300 hover:bg-slate-400'
+              }`}
             />
-            {selectedImage === index && (
-              <div className="absolute inset-0 bg-cyan-400/20"></div>
-            )}
-          </button>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -138,7 +206,7 @@ const SubcategoryProductDetail = () => {
 
       {/* Product Tags */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {productData.tags.map((tag, index) => (
+        {productData.tags?.map((tag, index) => (
           <span key={index} className={`px-3 py-1 text-xs font-medium rounded-full ${
             tag === 'ขายดี' ? 'bg-gradient-to-r from-orange-400 to-red-400 text-white' :
             tag === 'แนะนำ' ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white' :
@@ -158,14 +226,7 @@ const SubcategoryProductDetail = () => {
       {/* Rating & Reviews */}
       <div className="flex items-center space-x-4 mb-6">
         <div className="flex items-center space-x-1">
-          {/* {[...Array(5)].map((_, i) => (
-            <Star 
-              key={i} 
-              size={20} 
-              className={i < Math.floor(productData.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'} 
-            />
-          ))} */}
-          {/* <span className="font-bold text-slate-700 ml-2">{productData.rating}</span> */}
+          {/* Rating stars would go here */}
         </div>
         <span className="text-slate-500">• ขายแล้ว {productData.sold} ชิ้น</span>
       </div>
@@ -180,37 +241,6 @@ const SubcategoryProductDetail = () => {
         </div>
         <p className="text-slate-600">รวม VAT แล้ว ไม่รวมค่าจัดส่ง</p>
       </div>
-
-      {/* Color Variants */}
-      {/* <div className="mb-8">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">เลือกสี</h3>
-        <div className="flex space-x-3">
-          {productData.variants.map((variant, index) => (
-            <button
-              key={index}
-              onClick={() => setSelectedVariant(index)}
-              disabled={!variant.inStock}
-              className={`relative p-1 rounded-full transition-all duration-300 ${
-                selectedVariant === index ? 'ring-4 ring-cyan-400 scale-110' : 'hover:scale-105'
-              } ${!variant.inStock ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <div 
-                className="w-12 h-12 rounded-full border-2 border-white shadow-lg"
-                style={{ backgroundColor: variant.color }}
-              ></div>
-              {!variant.inStock && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-0.5 bg-red-500 rotate-45"></div>
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-        <p className="text-sm text-slate-600 mt-2">
-          สี: {productData.variants[selectedVariant].name}
-          {!productData.variants[selectedVariant].inStock && " (สินค้าหมด)"}
-        </p>
-      </div> */}
 
       {/* Quantity & Actions */}
       <div className="mb-8">
@@ -240,17 +270,6 @@ const SubcategoryProductDetail = () => {
             <ShoppingCart className="inline mr-2" size={20} />
             สั่งซื้อ
           </button>
-          {/* <button 
-            onClick={() => setIsFavorite(!isFavorite)}
-            className={`w-full py-4 font-bold rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
-              isFavorite 
-                ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white' 
-                : 'bg-gradient-to-r from-slate-200 to-slate-300 text-slate-700 hover:from-slate-300 hover:to-slate-400'
-            }`}
-          >
-            <Heart className="inline mr-2" size={20} fill={isFavorite ? 'currentColor' : 'none'} />
-            {isFavorite ? 'ลบออกจากรายการโปรด' : 'เพิ่มในรายการโปรด'}
-          </button> */}
         </div>
       </div>
 
@@ -318,32 +337,8 @@ const SubcategoryProductDetail = () => {
           <div className="space-y-6">
             <h3 className="text-2xl font-bold text-slate-800 mb-4">รายละเอียดสินค้า</h3>
             <p className="text-slate-600 leading-relaxed text-lg">{productData.description}</p>
-            
-            {/* <h4 className="text-xl font-semibold text-slate-800 mt-8 mb-4">จุดเด่นของสินค้า</h4> */}
-            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {productData.features.map((feature, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <CheckCircle className="text-green-500 mt-1 flex-shrink-0" size={20} />
-                  <p className="text-slate-600">{feature}</p>
-                </div>
-              ))}
-            </div> */}
           </div>
         )}
-
-        {/* {activeTab === 'specifications' && (
-          <div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-6">ข้อมูลเทคนิค</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.entries(productData.specifications).map(([key, value], index) => (
-                <div key={index} className="flex justify-between items-center py-3 border-b border-slate-200">
-                  <span className="font-semibold text-slate-700">{key}</span>
-                  <span className="text-slate-600">{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )} */}
 
         {activeTab === 'reviews' && (
           <div>
@@ -386,13 +381,12 @@ const SubcategoryProductDetail = () => {
   );
 
   const RelatedProducts = () => (
-    
     <div className={`transition-all duration-1000 delay-700 ${
       animatedElements.has('related') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
     }`}>
       <h2 className="text-3xl font-bold text-slate-800 mb-8">สินค้าที่เกี่ยวข้อง</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {relatedProducts.map((product, index) => (
+        {relatedProducts.map && relatedProducts.map((product, index) => (
           <div key={product.id} className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-slate-200">
             <div className="relative mb-4 rounded-xl overflow-hidden">
               <img
@@ -405,13 +399,6 @@ const SubcategoryProductDetail = () => {
             <h3 className="font-bold text-slate-800 mb-2 group-hover:text-cyan-600 transition-colors line-clamp-2">
               {product.name}
             </h3>
-            <div className="flex items-center space-x-2 mb-3">
-              {/* <div className="flex items-center">
-                <Star size={14} className="text-yellow-400 fill-current" />
-                <span className="text-sm font-semibold ml-1">{product.rating}</span>
-              </div> */}
-              {/* <span className="text-sm text-slate-500">({product.reviews})</span> */}
-            </div>
             <div className="flex items-center justify-between">
               <span className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
                 {product.price}
@@ -425,7 +412,8 @@ const SubcategoryProductDetail = () => {
       </div>
     </div>
   );
-   if (loading) {
+  
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">

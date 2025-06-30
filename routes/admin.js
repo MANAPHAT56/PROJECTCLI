@@ -13,4 +13,7 @@ router.post('/new/category',Admincontroller.InsertNewCategory);
 router.put('/edit/subcategory/:subcategoryId',Admincontroller.EditSubcategory);
 router.post('/new/subcategory',Admincontroller.InsertNewSubcategory);
 router.delete('/delete/subcategory/:subcategoryId',Admincontroller.DeleteSubcategory);
+router.post('/new/works',Admincontroller.addNewWork)
+router.delete('/delete/works/:worksId',Admincontroller.deleteWork)
+router.put('/edit/works/:worksId',Admincontroller.updateWork)
 module.exports = router;

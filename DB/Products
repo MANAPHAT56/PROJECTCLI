@@ -11,9 +11,10 @@ CREATE TABLE Products (
   monthly_purchases INT DEFAULT 0,
   stock INT DEFAULT 0,
     FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE CASCADE,
-  FOREIGN KEY (subcategory_id) REFERENCES Subcategories(id) ON DELETE CASCADE
-);
-
+  FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE CASCADE
+)CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER TABLE Categories CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ใส่ในproductด้วย
 CREATE TABLE product_images (
   id INT PRIMARY KEY AUTO_INCREMENT,
   product_id INT NOT NULL,

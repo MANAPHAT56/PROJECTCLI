@@ -22,3 +22,4 @@ CREATE TABLE WorksImages (
   display_order INT DEFAULT 0,   -- ใช้จัดเรียงภาพ
   FOREIGN KEY (work_id) REFERENCES Works(id) ON DELETE CASCADE
 );
+ALTER TABLE Works CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

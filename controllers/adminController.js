@@ -417,3 +417,168 @@ exports.DeleteSubcategory = async (req, res) => {
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบหมวดหมู่ย่อย' });
     }
 };
+exports.addNewWork = async (req, res) => {
+  try {
+    const {
+      name,
+      main_description,
+      sub_description,
+      main_category_id,
+      subcategory_id,
+      product_reference_id,
+      is_custom = false,
+      is_sample = false
+    } = req.body;
+
+    // ตรวจสอบข้อมูลเบื้องต้น
+    if (!name || !main_description || !main_category_id || !subcategory_id) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      });
+    }
+
+    const insertQuery = `
+      INSERT INTO Works (
+        name, 
+        main_description, 
+        sub_description, 
+        main_category_id, 
+        subcategory_id, 
+        product_reference_id,
+        is_custom, 
+        is_sample
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const [result] = await db.query(insertQuery, [
+      name,
+      main_description,
+      sub_description || null,
+      main_category_id,
+      subcategory_id,
+      product_reference_id || null,
+      is_custom,
+      is_sample
+    ]);
+
+    const newWorkId = result.insertId;
+
+    res.status(201).json({
+      worksId: newWorkId,
+      name,
+      main_description,
+      sub_description,
+      main_category_id,
+      subcategory_id,
+      product_reference_id,
+      is_custom,
+      is_sample
+    });
+
+  } catch (error) {
+    console.error('Error adding new work:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'ไม่สามารถเพิ่มผลงานได้',
+      details: error.message
+    });
+  }
+};
+// controllers/worksController.js
+
+exports.updateWork = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      main_description,
+      sub_description,
+      main_category_id,
+      subcategory_id,
+      product_reference_id,
+      is_custom = false,
+      is_sample = false
+    } = req.body;
+
+    if (!name || !main_description || !main_category_id || !subcategory_id) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
+      });
+    }
+
+    const updateQuery = `
+      UPDATE Works
+      SET name = ?, 
+          main_description = ?, 
+          sub_description = ?, 
+          main_category_id = ?, 
+          subcategory_id = ?, 
+          product_reference_id = ?, 
+          is_custom = ?, 
+          is_sample = ?
+      WHERE id = ?
+    `;
+
+    const [result] = await db.query(updateQuery, [
+      name,
+      main_description,
+      sub_description || null,
+      main_category_id,
+      subcategory_id,
+      product_reference_id || null,
+      is_custom,
+      is_sample,
+      id
+    ]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        error: 'Not found',
+        message: 'ไม่พบผลงานที่จะแก้ไข'
+      });
+    }
+
+    res.json({
+      message: 'แก้ไขผลงานสำเร็จ',
+      updatedId: id
+    });
+  } catch (error) {
+    console.error('Error updating work:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'ไม่สามารถแก้ไขผลงานได้',
+      details: error.message
+    });
+  }
+};
+// controllers/worksController.js
+
+exports.deleteWork = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleteQuery = `DELETE FROM Works WHERE id = ?`;
+    const [result] = await db.query(deleteQuery, [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        error: 'Not found',
+        message: 'ไม่พบผลงานที่ต้องการลบ'
+      });
+    }
+
+    res.json({
+      message: 'ลบผลงานสำเร็จ',
+      deletedId: id
+    });
+  } catch (error) {
+    console.error('Error deleting work:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'ไม่สามารถลบผลงานได้',
+      details: error.message
+    });
+  }
+};

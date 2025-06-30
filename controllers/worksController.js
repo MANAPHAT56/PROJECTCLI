@@ -301,7 +301,6 @@ exports.getWorkById = async (req, res) => {
         w.name,
         w.main_description,
         w.sub_description,
-        w.secondary_assets,
         w.main_category_id,
         w.subcategory_id,
         w.product_reference_id,

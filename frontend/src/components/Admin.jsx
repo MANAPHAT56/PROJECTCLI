@@ -1,8 +1,9 @@
 import React, { useState, useEffect,useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
+import Adminworks from './AdminWorks';
 import { 
+  Award,
   Plus,
   Search,
   Filter,
@@ -298,7 +299,7 @@ useEffect(() => {
         console.error('Error updating product:', error);
     } 
         
-      }
+} 
     } else if (modalType === 'edit') {
       if (currentView === 'products') {
         setProducts(products.map(p => 
@@ -446,7 +447,8 @@ useEffect(() => {
     { id: 'dashboard', name: 'แดชบอร์ด', icon: BarChart3 },
     { id: 'products', name: 'จัดการสินค้า', icon: Package },
     { id: 'categories', name: 'หมวดหมู่หลัก', icon: Grid3X3 },
-    { id: 'subcategories', name: 'หมวดหมู่ย่อย', icon: List }
+    { id: 'subcategories', name: 'หมวดหมู่ย่อย', icon: List },
+    {id : 'works',name:'จัดการผลงาน',icon : Award}
   ];
 
   const Sidebar = () => (
@@ -1246,6 +1248,7 @@ useEffect(() => {
           {currentView === 'products' && <ProductsView />}
           {currentView === 'categories' && <CategoriesView />}
           {currentView === 'subcategories' && <SubcategoriesView />}
+          {currentView === 'works' && <Adminworks/>}
         </main>
       </div>
       
