@@ -6,7 +6,7 @@ const imageController = require('../controllers/imageController');
 router.post('/upload/:category/:subcategory/:productId', 
   imageController.uploadImage
 );
-
+router.put('/:productId/set-main',imageController.SetmainImage);
 // 2. ดึงรูปภาพทั้งหมดของสินค้า - ตรงกับ Frontend ที่ใช้ใน loadImages
 router.get('/:productId/images', 
   imageController.getProductImages
@@ -31,5 +31,10 @@ router.delete('/delete/:category/:subcategory/:productId/:imageId',
 router.get('/view/:imagePath',
   imageController.viewImage
 );
-router.put('/:productId/set-main',imageController.SetmainImage);
+router.get('works/:workId',imageController.getWorkData)
+router.get('/works/:workId/images',imageController.getWorkImages)
+router.put('/works/:workId/set-main',imageController.setMainImageWorks)
+router.post('/works/upload/:category/:subcategory/:workId',imageController.uploadImageWorks)
+router.delete('/works/delete/:category/:subcategory/:workId/:imageId',imageController.deleteImageWorks)
+router.put('/works/reorder/:workId',imageController.reorderImagesWorks)
 module.exports = router;

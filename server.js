@@ -3,7 +3,7 @@ const app = express();
 app.use(express.json());
 const storeRouter = require('./routes/store');
 const worksRouter = require('./routes/work');
-const newsRouter = require('./routes/news');
+// const newsRouter = require('./routes/news');
 const Admin = require('./routes/admin');
 const Image = require('./routes/imageRoutes');
 const cookieParser = require('cookie-parser');
@@ -19,7 +19,7 @@ app.use('/api/store', storeRouter); // Base path
 app.use('/api/works', worksRouter); // Base path
 // app.use('/api/contact', contactRouter); // Base path
 // app.use('/api/articles', articlesRouter); // Base path
-app.use('/api/news', newsRouter); // Base path
+// app.use('/api/news', newsRouter); // Base path
 app.use('/api/admin', Admin); // Base path
 app.use('/api/images',Image); // Base path
 app.set('trust proxy', true);

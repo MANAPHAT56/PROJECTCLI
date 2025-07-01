@@ -60,7 +60,7 @@ services:
     #   replicas: 3
     ports:
       - "5000:5000"
-    restart: always
+    # restart: always
   nginx:
     image: nginx:latest
     container_name: nginx-server

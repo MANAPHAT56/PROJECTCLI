@@ -489,7 +489,7 @@ exports.addNewWork = async (req, res) => {
 
 exports.updateWork = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { worksId } = req.params;
     const {
       name,
       main_description,
@@ -500,7 +500,7 @@ exports.updateWork = async (req, res) => {
       is_custom = false,
       is_sample = false
     } = req.body;
-
+    
     if (!name || !main_description || !main_category_id || !subcategory_id) {
       return res.status(400).json({
         error: 'Missing required fields',
@@ -530,9 +530,8 @@ exports.updateWork = async (req, res) => {
       product_reference_id || null,
       is_custom,
       is_sample,
-      id
+      worksId
     ]);
-
     if (result.affectedRows === 0) {
       return res.status(404).json({
         error: 'Not found',
@@ -541,8 +540,7 @@ exports.updateWork = async (req, res) => {
     }
 
     res.json({
-      message: 'แก้ไขผลงานสำเร็จ',
-      updatedId: id
+      Message : "success"
     });
   } catch (error) {
     console.error('Error updating work:', error);
@@ -557,11 +555,11 @@ exports.updateWork = async (req, res) => {
 
 exports.deleteWork = async (req, res) => {
   try {
-    const { id } = req.params;
+    const {worksId}= req.params;
 
     const deleteQuery = `DELETE FROM Works WHERE id = ?`;
-    const [result] = await db.query(deleteQuery, [id]);
-
+    const [result] = await db.query(deleteQuery, [worksId]);
+   console.log(worksId+"worksId")
     if (result.affectedRows === 0) {
       return res.status(404).json({
         error: 'Not found',
@@ -571,7 +569,7 @@ exports.deleteWork = async (req, res) => {
 
     res.json({
       message: 'ลบผลงานสำเร็จ',
-      deletedId: id
+      deletedId: worksId
     });
   } catch (error) {
     console.error('Error deleting work:', error);

@@ -23,7 +23,9 @@ import {
   List,
   RefreshCw,
   CheckCircle,
-  XCircle
+  XCircle,
+  Upload,
+  ImageIcon
 } from 'lucide-react';
 const WorksAdminManagement = () => {
   // State Management
@@ -99,9 +101,9 @@ const WorksAdminManagement = () => {
       setError(null); // Clear previous errors
       const [worksRes, categoriesRes, allSubcategoriesRes, productsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/works/home`),
-        fetch(`${API_BASE_URL}/CategoryNav`),
+        fetch(`${API_BASE_URL}/works/categories`),
         fetch(`${API_BASE_URL}/works/subcategories`), // Fetch all subcategories initially
-        fetch(`${API_BASE_URL}/products`)
+        fetch(`${API_BASE_URL}/admin/products`)
       ]);
 
       if (!worksRes.ok || !categoriesRes.ok || !allSubcategoriesRes.ok || !productsRes.ok) {
@@ -115,10 +117,10 @@ const WorksAdminManagement = () => {
         productsRes.json()
       ]);
 
-      setWorks(worksData);
+      setWorks(worksData.works);
       setCategories(categoriesData);
       setSubcategories(allSubcategoriesData); // Store all subcategories
-      setProducts(productsData);
+      setProducts(productsData.data);
     } catch (error) {
       console.error('Error fetching initial data:', error);
       setError('ไม่สามารถโหลดข้อมูลได้: ' + error.message);
@@ -137,7 +139,7 @@ const WorksAdminManagement = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/works/subcategories/${categoryId}`);
+      const response = await fetch(`${API_BASE_URL}/works/subcategories/category/${categoryId}`);
       if (response.ok) {
         const data = await response.json();
         setSubcategories(data);
@@ -278,10 +280,10 @@ const WorksAdminManagement = () => {
 
       const url = modalMode === 'create'
         ? `${API_BASE_URL}/admin/new/works`
-        : `${API_BASE_URL}/admin/works/${selectedWork.id}`;
+        : `${API_BASE_URL}/admin/edit/works/${selectedWork.id}`;
 
       const method = modalMode === 'create' ? 'POST' : 'PUT';
-
+    console.log(newWorksData)
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -294,14 +296,15 @@ const WorksAdminManagement = () => {
       }
 
       const result = await response.json();
-
+    console.log(result.worksId)
       if (modalMode === 'create') {
-        setWorks(prev => [...prev, result]);
-      } else {
+        setWorks(prev => [...prev, {...newWorksData,id: result.worksId}]);
+} else {
         setWorks(prev => prev.map(work =>
-          work.id === selectedWork.id ? { ...work, ...result } : work
+          work.id === selectedWork.id ? { ...work, ...newWorksData } : work
         ));
       }
+      console.log(works);
 
       closeModal();
     } catch (error) {
@@ -312,11 +315,10 @@ const WorksAdminManagement = () => {
     }
   };
 
-  const handleDelete = async (workId) => {
+  const handleDelete = async (worksId) => {
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบผลงานนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
-
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/works/${workId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/delete/works/:${worksId}`, {
         method: 'DELETE'
       });
 
@@ -325,7 +327,7 @@ const WorksAdminManagement = () => {
         throw new Error(errorData.message || 'Failed to delete work');
       }
 
-      setWorks(prev => prev.filter(work => work.id !== workId));
+      setWorks(prev => prev.filter(work => work.id !== worksId));
       setError(null); // Clear error if delete successful
     } catch (error) {
       console.error('Error deleting work:', error);
@@ -333,9 +335,7 @@ const WorksAdminManagement = () => {
     }
   };
 
-  // Helper to get names from IDs
-  const getCategoryName = (id) => categories.find(cat => cat.id === id)?.name || 'N/A';
-  const getSubcategoryName = (id) => subcategories.find(sub => sub.id === id)?.name || 'N/A';
+
   const getProductName = (id) => products.find(prod => prod.id === id)?.name || 'N/A';
 
   // Skeleton Components
@@ -503,11 +503,15 @@ const WorksAdminManagement = () => {
                 disabled={filterCategory === 'all' || !subcategories.length} // Disable if no category selected or no subcategories
               >
                 <option value="all">ทุกหมวดหมู่ย่อย</option>
-                {subcategories
-                  .filter(sub => filterCategory === 'all' || sub.main_category_id.toString() === filterCategory.toString())
-                  .map(sub => (
-                    <option key={sub.id} value={sub.id}>{sub.name}</option>
-                  ))}
+               {subcategories
+  .filter(
+    sub =>
+      sub?.category_id != null && // ✅ ตรวจสอบว่าไม่ใช่ undefined/null ก่อน
+      (filterCategory === 'all' || sub.category_id.toString() === filterCategory.toString())
+  )
+  .map(sub => (
+    <option key={sub.id} value={sub.id}>{sub.name}</option>
+))}
               </select>
               <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
@@ -603,11 +607,11 @@ const WorksAdminManagement = () => {
                   <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 mb-4 gap-2">
                     <span className="flex items-center gap-1">
                       <Tag size={12} />
-                      {getCategoryName(work.main_category_id)}
+                      {work.category_name}
                     </span>
                     <span className="flex items-center gap-1">
                       <ChevronDown size={12} className="rotate-[-90deg]" /> {/* Placeholder for subcategory icon */}
-                      {getSubcategoryName(work.subcategory_id)}
+                    {work.subcategory_name}
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar size={12} />
@@ -670,9 +674,9 @@ const WorksAdminManagement = () => {
                   </div>
 
                   <div className="col-span-6 md:col-span-2 text-sm text-slate-500">
-                    {getCategoryName(work.main_category_id)}
+                    {work.category_name}
                     <br />
-                    <span className="text-xs">{getSubcategoryName(work.subcategory_id)}</span>
+                    <span className="text-xs">{work.subcategory_name}</span>
                   </div>
 
                   <div className="col-span-6 md:col-span-2 text-sm text-slate-500">
@@ -706,7 +710,7 @@ const WorksAdminManagement = () => {
         )}
 
         {/* Modal */}
-        {showModal && (
+     {showModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-700">
               <div className="flex items-center justify-between mb-6">
@@ -742,11 +746,11 @@ const WorksAdminManagement = () => {
                   )}
                   <div>
                     <strong className="block text-slate-400 mb-1">หมวดหมู่หลัก:</strong>
-                    <p>{getCategoryName(selectedWork.main_category_id)}</p>
+                    <p>{selectedWork.category_name}</p>
                   </div>
                   <div>
                     <strong className="block text-slate-400 mb-1">หมวดหมู่ย่อย:</strong>
-                    <p>{getSubcategoryName(selectedWork.subcategory_id)}</p>
+                    <p>{selectedWork.subcategory_name}</p>
                   </div>
                   {selectedWork.product_reference_id && (
                     <div>
@@ -811,6 +815,21 @@ const WorksAdminManagement = () => {
                     ></textarea>
                   </div>
 
+                  {/* Simplified Image Management Section */}
+                  <div className="bg-slate-900/30 border border-slate-600 rounded-xl p-4">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-slate-300 text-sm font-medium">จัดการรูปภาพผลงาน</label>
+                      <button
+                        type="button"
+                        onClick={() => {/* Navigate to image management page */}}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
+                      >
+                        <Image size={16} />
+                        จัดการรูปภาพ
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="main_category_id" className="block text-slate-300 text-sm font-medium mb-1">หมวดหมู่หลัก <span className="text-red-400">*</span></label>
@@ -822,8 +841,10 @@ const WorksAdminManagement = () => {
                           className={`block appearance-none w-full px-4 py-2 bg-slate-900/50 border ${formErrors.main_category_id ? 'border-red-500' : 'border-slate-600'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8`}
                         >
                           <option value="">เลือกหมวดหมู่หลัก</option>
-                          {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          {categories
+                            .filter(cat => cat.name !== "ทั้งหมด")
+                            .map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
                           ))}
                         </select>
                         <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -842,8 +863,10 @@ const WorksAdminManagement = () => {
                           disabled={!formData.main_category_id || subcategories.length === 0}
                         >
                           <option value="">เลือกหมวดหมู่ย่อย</option>
-                          {subcategories.map(sub => (
-                            <option key={sub.id} value={sub.id}>{sub.name}</option>
+                          {subcategories
+                            .filter(sub => sub.name !== "ทั้งหมด")
+                            .map(sub => (
+                              <option key={sub.id} value={sub.id}>{sub.name}</option>
                           ))}
                         </select>
                         <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" />

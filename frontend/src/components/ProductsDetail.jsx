@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { 
+  X,
   ChevronRight, 
   ChevronLeft,
   ShoppingCart, 
@@ -21,7 +23,7 @@ import {
   ThumbsUp
 } from 'lucide-react';
 // Mock router functions for demo
-const useParams = () => ({ productId: '1' });
+
 const useNavigate = () => (path) => console.log('Navigate to:', path); 
 
 const SubcategoryProductDetail = () => {
@@ -191,122 +193,175 @@ const SubcategoryProductDetail = () => {
     </div>
   );
 
-  const ProductInfo = () => (
-    <div className={`transition-all duration-1000 delay-300 ${
-      animatedElements.has('info') ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'
-    }`}>
-      {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm text-slate-500 mb-6">
-        <span>หน้าแรก</span>
-        <ChevronRight size={16} />
-        <span>{productData.category}</span>
-        <ChevronRight size={16} />
-        <span className="text-cyan-600 font-medium">{productData.subcategory}</span>
-      </nav>
+const ProductInfo = () => {
+  const [quantity, setQuantity] = useState(1);
+  const [showOrderSummary, setShowOrderSummary] = useState(false);
 
-      {/* Product Tags */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {productData.tags?.map((tag, index) => (
-          <span key={index} className={`px-3 py-1 text-xs font-medium rounded-full ${
-            tag === 'ขายดี' ? 'bg-gradient-to-r from-orange-400 to-red-400 text-white' :
-            tag === 'แนะนำ' ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white' :
-            tag === 'ใหม่ล่าสุด' ? 'bg-gradient-to-r from-blue-400 to-cyan-400 text-white' :
-            'bg-gradient-to-r from-purple-400 to-pink-400 text-white'
-          }`}>
-            {tag}
-          </span>
-        ))}
-      </div>
+  const handleOrderClick = () => {
+  setShowOrderSummary(true);
+  };
 
-      {/* Product Title */}
-      <h1 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-4 leading-tight">
-        {productData.name}
-      </h1>
+  const handleCloseOrderSummary = () => {
+  setShowOrderSummary(false);
+  };
 
-      {/* Rating & Reviews */}
-      <div className="flex items-center space-x-4 mb-6">
-        <div className="flex items-center space-x-1">
-          {/* Rating stars would go here */}
-        </div>
-        <span className="text-slate-500">• ขายแล้ว {productData.sold} ชิ้น</span>
-      </div>
+  return (
+  <div className="relative p-4"> {/* Make the main div relative for absolute positioning of the modal */}
+  <div className={`transition-all duration-1000 delay-300 ${
+  animatedElements.has('info') ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'
+  }`}>
+  {/* Breadcrumb (as before) */}
+  <nav className="flex items-center space-x-2 text-sm text-slate-500 mb-6">
+  <span>หน้าแรก</span>
+  <ChevronRight size={16} />
+  <span>{productData.category}</span>
+  <ChevronRight size={16} />
+  <span className="text-cyan-600 font-medium">{productData.subcategory}</span>
+  </nav>
 
-      {/* Price */}
-      <div className="mb-8">
-        <div className="flex items-center space-x-4 mb-2">
-          <span className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-            {productData.price}
-          </span>
-          <span className="text-xl text-slate-400 line-through">{productData.originalPrice}</span>
-        </div>
-        <p className="text-slate-600">รวม VAT แล้ว ไม่รวมค่าจัดส่ง</p>
-      </div>
+  {/* Product Tags (as before) */}
+  <div className="flex flex-wrap gap-2 mb-4">
+  {productData.tags?.map((tag, index) => (
+  <span key={index} className={`px-3 py-1 text-xs font-medium rounded-full ${
+  tag === 'ขายดี' ? 'bg-gradient-to-r from-orange-400 to-red-400 text-white' :
+  tag === 'แนะนำ' ? 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white' :
+  tag === 'ใหม่ล่าสุด' ? 'bg-gradient-to-r from-blue-400 to-cyan-400 text-white' :
+  'bg-gradient-to-r from-purple-400 to-pink-400 text-white'
+  }`}>
+  {tag}
+  </span>
+  ))}
+  </div>
 
-      {/* Quantity & Actions */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4">จำนวน</h3>
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="flex items-center border-2 border-slate-200 rounded-full overflow-hidden">
-            <button 
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              className="px-4 py-2 hover:bg-slate-100 transition-colors"
-            >
-              -
-            </button>
-            <span className="px-6 py-2 font-semibold">{quantity}</span>
-            <button 
-              onClick={() => setQuantity(quantity + 1)}
-              className="px-4 py-2 hover:bg-slate-100 transition-colors"
-            >
-              +
-            </button>
-          </div>
-          <span className="text-slate-600">ชิ้น ({productData.stock} ชิ้น)</span>
-        </div>
+  {/* Product Title (as before) */}
+  <h1 className="text-3xl lg:text-4xl font-bold text-slate-800 mb-4 leading-tight">
+  {productData.name}
+  </h1>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <button className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold rounded-2xl hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
-            <ShoppingCart className="inline mr-2" size={20} />
-            สั่งซื้อ
-          </button>
-        </div>
-      </div>
+  {/* Rating & Reviews (as before) */}
+  <div className="flex items-center space-x-4 mb-6">
+  <div className="flex items-center space-x-1">
+  {/* Rating stars would go here */}
+  </div>
+  <span className="text-slate-500">• ขายแล้ว {productData.sold} ชิ้น</span>
+  </div>
 
-      {/* Features */}
-      <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-full">
-              <Truck className="text-green-600" size={20} />
-            </div>
-            <div>
-              <p className="font-semibold text-slate-800">ส่งฟรี</p>
-              <p className="text-sm text-slate-600">ทั่วกรุงเทพฯ</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <Shield className="text-blue-600" size={20} />
-            </div>
-            <div>
-              <p className="font-semibold text-slate-800">รับประกัน 5 ปี</p>
-              <p className="text-sm text-slate-600">โครงสร้างหลัก</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-full">
-              <Award className="text-purple-600" size={20} />
-            </div>
-            <div>
-              <p className="font-semibold text-slate-800">คุณภาพพรีเมียม</p>
-              <p className="text-sm text-slate-600">ผ้านำเข้า</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  {/* Price (as before) */}
+  <div className="mb-8">
+  <div className="flex items-center space-x-4 mb-2">
+  <span className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+  {productData.price}
+  </span>
+  <span className="text-xl text-slate-400 line-through">{productData.originalPrice}</span>
+  </div>
+  <p className="text-slate-600">รวม VAT แล้ว ไม่รวมค่าจัดส่ง</p>
+  </div>
+
+  {/* Quantity & Actions (as before) */}
+  <div className="mb-8">
+  <h3 className="text-lg font-semibold text-slate-800 mb-4">จำนวน</h3>
+  <div className="flex items-center space-x-4 mb-6">
+  <div className="flex items-center border-2 border-slate-200 rounded-full overflow-hidden">
+  <button
+  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+  className="px-4 py-2 hover:bg-slate-100 transition-colors"
+  >
+  -
+  </button>
+  <span className="px-6 py-2 font-semibold">{quantity}</span>
+  <button
+  onClick={() => setQuantity(quantity + 1)}
+  className="px-4 py-2 hover:bg-slate-100 transition-colors"
+  >
+  +
+  </button>
+  </div>
+  <span className="text-slate-600">ชิ้น ({productData.stock} ชิ้น)</span>
+  </div>
+
+  {/* Action Buttons */}
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <button
+  onClick={handleOrderClick}
+  className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold rounded-2xl hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+  >
+  <ShoppingCart className="inline mr-2" size={20} />
+  สั่งซื้อ
+  </button>
+  </div>
+  </div>
+
+  {/* Features (as before) */}
+  <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div className="flex items-center space-x-3">
+  <div className="p-2 bg-green-100 rounded-full">
+  <Truck className="text-green-600" size={20} />
+  </div>
+  <div>
+  <p className="font-semibold text-slate-800">ส่งฟรี</p>
+  <p className="text-sm text-slate-600">ทั่วกรุงเทพฯ</p>
+  </div>
+  </div>
+  <div className="flex items-center space-x-3">
+  <div className="p-2 bg-blue-100 rounded-full">
+  <Shield className="text-blue-600" size={20} />
+  </div>
+  <div>
+  <p className="font-semibold text-slate-800">รับประกัน 5 ปี</p>
+  <p className="text-sm text-slate-600">โครงสร้างหลัก</p>
+  </div>
+  </div>
+  <div className="flex items-center space-x-3">
+  <div className="p-2 bg-purple-100 rounded-full">
+  <Award className="text-purple-600" size={20} />
+  </div>
+  <div>
+  <p className="font-semibold text-slate-800">คุณภาพพรีเมียม</p>
+  <p className="text-sm text-slate-600">ผ้านำเข้า</p>
+  </div>
+  </div>
+  </div>
+  </div>
+  </div>
+
+  {/* Order Summary Modal */}
+  {showOrderSummary && (
+  <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center z-50">
+  <div className="relative bg-white rounded-xl shadow-lg border border-indigo-200 overflow-hidden m-4 max-w-md w-full">
+  <div className="absolute top-2 right-2">
+  <button
+  onClick={handleCloseOrderSummary}
+  className="p-2 rounded-full hover:bg-slate-200 transition-colors"
+  >
+  <X size={20} className="text-slate-600" />
+  </button>
+  </div>
+  <div className="px-6 py-8">
+  <h2 className="text-3xl font-bold text-indigo-700 mb-6 text-center">สรุปคำสั่งซื้อ</h2>
+  <div className="space-y-4 text-lg text-slate-700">
+  <p><span className="font-semibold">ไอดีสินค้า:</span> <span className="text-indigo-500">{productData.id}</span></p>
+  <p><span className="font-semibold">ชื่อสินค้า:</span> <span className="text-indigo-500">{productData.name}</span></p>
+  <p><span className="font-semibold">หมวดหมู่หลัก:</span> <span className="text-indigo-500">{productData.category}</span></p>
+  <p><span className="font-semibold">หมวดหมู่ย่อย:</span> <span className="text-indigo-500">{productData.subcategory}</span></p>
+  <p><span className="font-semibold">จำนวน:</span> <span className="text-indigo-500">{quantity} ชิ้น</span></p>
+  </div>
+  <div className="mt-8">
+  <button
+  onClick={() => alert('ดำเนินการสั่งซื้อต่อ...')} // Replace with your actual checkout logic
+  className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-colors shadow-md"
+  >
+  ดำเนินการสั่งซื้อ
+  </button>
+  </div>
+  </div>
+  </div>
+  </div>
+  )}
+  </div>
   );
+ };
+
 
   const ProductTabs = () => (
     <div className="mb-16">
