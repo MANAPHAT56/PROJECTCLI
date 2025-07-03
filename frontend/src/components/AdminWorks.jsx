@@ -27,6 +27,7 @@ import {
   Upload,
   ImageIcon
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 const WorksAdminManagement = () => {
   // State Management
   const [works, setWorks] = useState([]);
@@ -36,7 +37,7 @@ const WorksAdminManagement = () => {
   const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const navigate=useNavigate();
   // UI State
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create', 'edit', 'view'
@@ -93,7 +94,9 @@ const WorksAdminManagement = () => {
 
     return errors;
   }, [formData, subcategories]); // Add subcategories to dependencies for validation
-
+  const NavigateTOWorks = (async (workId,categoryId,subcategoryId)=>{
+    window.location.href =`/images/works/${workId}/${categoryId}/${subcategoryId}/page`;
+  })
   // Fetch Initial Data
   const fetchInitialData = useCallback(async () => {
     try {
@@ -818,10 +821,9 @@ const WorksAdminManagement = () => {
                   {/* Simplified Image Management Section */}
                   <div className="bg-slate-900/30 border border-slate-600 rounded-xl p-4">
                     <div className="flex items-center justify-between">
-                      <label className="block text-slate-300 text-sm font-medium">จัดการรูปภาพผลงาน</label>
                       <button
                         type="button"
-                        onClick={() => {/* Navigate to image management page */}}
+                        onClick={() => {NavigateTOWorks(selectedWork.id,formData.main_category_id,formData.subcategory_id)}}
                         className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
                       >
                         <Image size={16} />

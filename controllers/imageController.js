@@ -312,7 +312,7 @@ exports.SetmainImage = async(req,res)=>{
   exports.uploadImageWorks = [
     upload.single('image'),
     async (req, res) => {
-      const { category, subcategory, workId } = req.params;
+      const { categoryId, subcategoryId, workId } = req.params;
       const file = req.file;
   
       if (!file) {
@@ -324,7 +324,7 @@ exports.SetmainImage = async(req,res)=>{
         const timestamp = Date.now();
         const ext = path.extname(file.originalname);
         const filename = `${timestamp}${ext}.webp`;
-        const s3Key = `works/${category}/${subcategory}/${workId}/${filename}`;
+        const s3Key = `works/${categoryId}/${subcategoryId}/${workId}/${filename}`;
         
         // อัปโหลดไฟล์ไป S3
         const fileStream = fs.createReadStream(file.path);

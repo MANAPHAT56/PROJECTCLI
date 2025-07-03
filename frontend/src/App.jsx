@@ -14,6 +14,7 @@ const Admin = React.lazy(() => import('./components/Admin'));
 const Works = React.lazy(() => import('./components/Works'));
 const WorksDetail = React.lazy(() => import('./components/WorksDetail'));
 const ProductImagesManagement = React.lazy(() => import('./components/Imagemenagemant'));
+const WorksImages = React.lazy(()=>import('./components/ImageWorks'))
 
 const App = () => {
   return (
@@ -43,6 +44,7 @@ const App = () => {
           <Route path="/worksDetail/:workId" element={<WorksDetail />} />
 
           <Route path="/images/:productId" element={<ProductImagesManagement />} />
+          <Route path="/images/works/:workId/:categoryId/:subcategoryId/page"    element= {<WorksImages />}   /> 
         </Routes>
       </Suspense>
     </Router>

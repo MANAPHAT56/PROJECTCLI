@@ -34,9 +34,8 @@ const WorksImageManager = () => {
   const dropZoneRef = useRef(null);
    
   // Mock workId, category, subcategory - ในการใช้งานจริงจะได้จาก URL params
-  const workId = useParams();
-  const category = 'interior';
-  const subcategory = 'bedroom';
+  const {workId,categoryId,subcategoryId} = useParams();
+
 
   // โหลดข้อมูลเมื่อเริ่มต้น
   useEffect(() => {
@@ -48,8 +47,9 @@ const WorksImageManager = () => {
   // โหลดข้อมูล Work
   const loadWorkData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/images/works/${workId}`);
+      const response = await fetch(`http://localhost:5000/api/works/works/${workId}`);
       const data = await response.json();
+      console.log(data)
       setWorkData(data);
     } catch (err) {
       console.error('Error fetching work data:', err);
@@ -87,7 +87,7 @@ const WorksImageManager = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/images/works/upload/${category}/${subcategory}/${workId}`,
+        `http://localhost:5000/api/images/works/upload/${categoryId}/${subcategoryId}/${workId}`,
         {
           method: 'POST',
           body: formData,
@@ -308,7 +308,7 @@ const WorksImageManager = () => {
     showNotification('กำลังลบรูปภาพ...');
     try {
       const response = await fetch(
-        `http://localhost:5000/api/images/works/delete/${category}/${subcategory}/${workId}/${imageId}`,
+        `http://localhost:5000/api/images/works/delete/${categoryId}/${subcategoryId}/${workId}/${imageId}`,
         { method: 'DELETE' }
       );
 
@@ -392,8 +392,8 @@ const WorksImageManager = () => {
 
   // สร้าง image URL
   const getImageUrl = (imagePath) => {
-    if (imagePath.startsWith('blob:') || imagePath.startsWith('data:')) {
-      return imagePath; // For temporary local previews
+    if (imagePath.startsWith('works')){
+      return   "https://cdn.toteja.co/"+imagePath; // For temporary local previews
     }
     // Encode the imagePath because it's part of the URL path for backend
     return `http://localhost:5000/api/images/works/view/${encodeURIComponent(imagePath)}`;

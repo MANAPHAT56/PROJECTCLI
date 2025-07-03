@@ -198,7 +198,7 @@ const WorksDetail = () => {
   const visibleImages = allImages.slice(imageGalleryStartIndex, imageGalleryStartIndex + 8);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="mt-13 min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 py-4">
@@ -247,7 +247,7 @@ const WorksDetail = () => {
               <X size={20} />
             </button>
             <img 
-              src={currentImage} 
+              src={"https://cdn.toteja.co/"+currentImage} 
               alt={work.name} 
               className="max-w-full max-h-full object-contain rounded-lg" 
               onError={(e) => {
@@ -265,7 +265,7 @@ const WorksDetail = () => {
             <div className="lg:w-1/2">
               <div className="relative">
                 <img 
-                  src={currentImage} 
+                  src={"https://cdn.toteja.co/"+currentImage} 
                   alt={work.name} 
                   className="w-full h-80 object-cover rounded-xl cursor-zoom-in"
                   onClick={() => setShowImageModal(true)}
@@ -391,7 +391,7 @@ const WorksDetail = () => {
                       }`}
                     >
                       <img 
-                        src={image} 
+                        src={"https://cdn.toteja.co/"+image} 
                         alt={`${work.name} - ${actualIndex + 1}`} 
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -521,7 +521,7 @@ const WorksDetail = () => {
                   <div className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:border-blue-300">
                     <div className="relative">
                       <img 
-                        src={relatedWork.cover_image || 'https://via.placeholder.com/300x200?text=No+Image'} 
+                        src={"https://cdn.toteja.co/"+relatedWork.cover_image || 'https://via.placeholder.com/300x200?text=No+Image'} 
                         alt={relatedWork.name}
                         className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {

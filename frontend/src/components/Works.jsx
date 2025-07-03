@@ -205,7 +205,7 @@ const WorksPortfolio = () => {
     <div className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-700/50 hover:border-blue-500/50">
       <div className="relative overflow-hidden">
         <img
-          src={work.cover_image || '/api/placeholder/400/250'}
+          src={"https://cdn.toteja.co/"+work.cover_image || '/api/placeholder/400/250'}
           alt={work.name}
           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-700"
           loading="lazy"
