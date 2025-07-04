@@ -64,7 +64,7 @@ const AdminDashboard = () => {
     useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 1000); // รอ 1 วินาที
+    }, 500); // รอ 1 วินาที
 
     return () => {
       clearTimeout(handler); // ถ้าผู้ใช้ยังพิมพ์อยู่ ให้เคลียร์ timeout เดิม

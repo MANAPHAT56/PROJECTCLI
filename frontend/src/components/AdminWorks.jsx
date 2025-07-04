@@ -91,21 +91,23 @@ useEffect(() => {
   if (selectedCategory && selectedCategory!="all") {
     params.append("category", selectedCategory);
   }
-
   if (selectedSubcategory && selectedSubcategory!="all") {
     params.append("subcategory", selectedSubcategory);
   }
   if (searchTerm) {
-  params.append("searchTerm", searchTerm);
+  params.append("search", searchTerm);
 }
-
+if(filterType){
+   params.append("sort",filterType)
+}
   axios
-    .get(`http://localhost:5000/api/works/home?${params.toString()}`)
+    .get(`http://localhost:5000/api/admin/works/home?${params.toString()}`)
     .then((res) => {
-      setProducts(res.data.data);
+
+      setWorks(res.data.works)
       setPagination(res.data.pagination);
     });
-}, [currentPage, selectedCategory, selectedSubcategory]);
+}, [currentPage, selectedCategory, selectedSubcategory,searchTerm,filterType]);
   // Validation Rules
   const validateForm = useCallback(() => {
     const errors = {};
@@ -143,7 +145,7 @@ useEffect(() => {
       setInitialLoading(true);
       setError(null); // Clear previous errors
       const [worksRes, categoriesRes, allSubcategoriesRes, productsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/works/home`),
+        fetch(`${API_BASE_URL}/admin/works/home`),
         fetch(`${API_BASE_URL}/works/categories`),
         fetch(`${API_BASE_URL}/works/subcategories`), // Fetch all subcategories initially
         fetch(`${API_BASE_URL}/admin/products`)
@@ -180,7 +182,6 @@ useEffect(() => {
       setSubcategories([]); // Or filter the full list if you fetched all initially
       return;
     }
-
     try {
       const response = await fetch(`${API_BASE_URL}/works/subcategories/category/${categoryId}`);
       if (response.ok) {
@@ -215,29 +216,7 @@ useEffect(() => {
 
 
   // Filtered works
-  const filteredWorks = useMemo(() => {
-    // Combine original categories and subcategories with filtered ones from modal context
-    const allCategories = categories; // No change needed for filter categories
-    const allSubcategoriesForFilter = subcategories; // This will hold all available subcategories
-
-    return works.filter(work => {
-      const matchesSearch = work.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        work.main_description.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesCategory = filterCategory === 'all' ||
-        work.main_category_id.toString() === filterCategory.toString();
-
-      const matchesSubcategory = filterSubcategory === 'all' ||
-        work.subcategory_id.toString() === filterSubcategory.toString();
-
-      const matchesType = filterType === 'all' ||
-        (filterType === 'custom' && work.is_custom) ||
-        (filterType === 'sample' && work.is_sample);
-
-      return matchesSearch && matchesCategory && matchesSubcategory && matchesType;
-    });
-  }, [works, searchTerm, filterCategory, filterSubcategory, filterType, categories, subcategories]);
-
+ 
   // Modal handlers
   const openModal = (mode, work = null) => {
     setModalMode(mode);
@@ -504,7 +483,7 @@ useEffect(() => {
             </div>
 
             <div className="text-sm text-slate-400 bg-slate-700/50 px-3 py-1 rounded-full">
-              ทั้งหมด {filteredWorks.length} รายการ
+              ทั้งหมด {works.length} รายการ
             </div>
           </div>
 
@@ -529,7 +508,8 @@ useEffect(() => {
                 onChange={(e) => {
                   setSelectedCategory(e.target.value);
                   setFilterCategory(e.target.value);
-                  setFilterSubcategory('all'); // Reset subcategory filter when category changes
+                  setFilterSubcategory("all")
+                 setSelectedSubCategory("all");
                 }}
                 className="block appearance-none w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8"
               >
@@ -611,7 +591,7 @@ useEffect(() => {
               viewMode === 'grid' ? <WorkCardSkeleton key={i} /> : <WorkRowSkeleton key={i} />
             )}
           </div>
-        ) : filteredWorks.length === 0 ? (
+        ) : works.length === 0 ? (
           <div className="text-center py-20">
             <Package size={64} className="mx-auto text-slate-600 mb-4" />
             <h3 className="text-xl font-semibold text-slate-300 mb-2">ไม่พบผลงาน</h3>
@@ -625,7 +605,7 @@ useEffect(() => {
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredWorks.map((work) => (
+            {works.map((work) => (
               <div
                 key={work.id}
                 className="bg-slate-800/50 backdrop-blur-sm rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-700/50 hover:border-blue-500/50"
@@ -698,7 +678,7 @@ useEffect(() => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredWorks.map((work) => (
+            {works.map((work) => (
               <div
                 key={work.id}
                 className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300"
@@ -924,7 +904,6 @@ useEffect(() => {
                           value={formData.main_category_id}
                           onChange={(e) => {
   setFormData({ ...formData, main_category_id: e.target.value }); 
-  setSelectedCategory(e.target.value);
 }}
                           className={`block appearance-none w-full px-4 py-2 bg-slate-900/50 border ${formErrors.main_category_id ? 'border-red-500' : 'border-slate-600'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8`}
                         >
@@ -948,7 +927,6 @@ useEffect(() => {
                           value={formData.subcategory_id}
                                                  onChange={(e) => {
   setFormData({ ...formData, subcategory_id: e.target.value }); 
-  setSelectedSubCategory(e.target.value)
 }}
                           className={`block appearance-none w-full px-4 py-2 bg-slate-900/50 border ${formErrors.subcategory_id ? 'border-red-500' : 'border-slate-600'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8`}
                           disabled={!formData.main_category_id || subcategories.length === 0}

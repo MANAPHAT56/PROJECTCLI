@@ -16,4 +16,5 @@ router.delete('/delete/subcategory/:subcategoryId',Admincontroller.DeleteSubcate
 router.post('/new/works',Admincontroller.addNewWork)
 router.delete('/delete/works/:worksId',Admincontroller.deleteWork)
 router.put('/edit/works/:worksId',Admincontroller.updateWork)
+router.get('/works/home',Admincontroller.getWorksHome)
 module.exports = router;

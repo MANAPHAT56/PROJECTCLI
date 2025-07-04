@@ -667,3 +667,146 @@ exports.deleteWork = async (req, res) => {
     });
   }
 };
+exports.getWorksHome = async (req, res) => {
+  try {
+    const {
+      page,
+      limit = 12,
+      category,
+      subcategory,
+      search,
+      sort
+    } = req.query;
+    const pageNumber = parseInt(page) || 1;
+    const offset = (pageNumber - 1) * parseInt(limit);
+
+    let whereConditions = [];
+    let queryParams = [];
+
+    if (category && category !== 'all') {
+      whereConditions.push('w.main_category_id = ?');
+      queryParams.push(category);
+    }
+
+    if (subcategory && subcategory !== 'all') {
+      whereConditions.push('w.subcategory_id = ?');
+      queryParams.push(subcategory);
+    }
+if (typeof search === 'string' && search.trim() !== '') {
+  const trimmedSearch = search.trim();
+
+  if (!isNaN(trimmedSearch)) {
+    // ค้นหาด้วย id เท่านั้น
+    whereConditions.push('w.id = ?');
+    queryParams.push(parseInt(trimmedSearch));
+  } else {
+    // ถ้าไม่ใช่ตัวเลข → ค้นจากชื่อหรือคำอธิบาย
+    const searchTerm = `%${trimmedSearch}%`;
+    whereConditions.push('(w.name LIKE ? OR w.main_description LIKE ?)');
+    queryParams.push(searchTerm, searchTerm);
+  }
+}
+    let orderByClause = '';
+    switch (sort) {
+      case 'all':
+        orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
+        break;
+      case 'oldest':
+        orderByClause = 'ORDER BY w.created_at ASC, w.id ASC';
+        break;
+      case 'custom':
+        whereConditions.push('w.is_custom = true');
+        orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
+        break;
+      case 'sample':
+        whereConditions.push('w.is_sample = true');
+        orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
+        break;
+      // case 'category_asc':
+      //   orderByClause = 'ORDER BY c.name ASC, w.created_at DESC';
+      //   break;
+      // case 'category_desc':
+      //   orderByClause = 'ORDER BY c.name DESC, w.created_at DESC';
+      //   break;
+      default:
+        orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
+    }
+
+    const finalWhereClause = whereConditions.length > 0 
+      ? `WHERE ${whereConditions.join(' AND ')}` 
+      : '';
+
+    const countQuery = `
+      SELECT COUNT(*) as count 
+      FROM Works w
+      LEFT JOIN Categories c ON w.main_category_id = c.id
+      LEFT JOIN subcategories s ON w.subcategory_id = s.id
+      ${finalWhereClause}
+    `;
+
+    const [countResult] = await db.query(countQuery, queryParams);
+    const totalWorks = countResult[0].count;
+
+    const worksQuery = `
+      SELECT 
+        w.id,
+        w.name,
+        w.main_description,
+        w.sub_description,
+        w.main_category_id,
+        w.subcategory_id,
+        w.product_reference_id,
+        w.is_custom,
+        w.is_sample,
+        w.created_at,
+        COALESCE(c.name, 'ไม่ระบุหมวดหมู่') as category_name,
+        COALESCE(s.name, 'ไม่ระบุหมวดหมู่ย่อย') as subcategory_name,
+        wi.image_path AS cover_image
+      FROM Works w
+      LEFT JOIN Categories c ON w.main_category_id = c.id
+      LEFT JOIN subcategories s ON w.subcategory_id = s.id
+      LEFT JOIN WorksImages wi ON wi.work_id = w.id AND wi.is_main = true
+      ${finalWhereClause}
+      ${orderByClause}
+      LIMIT ? OFFSET ?
+    `;
+
+    const finalQueryParams = [...queryParams, parseInt(limit), offset];
+    const [works] = await db.query(worksQuery, finalQueryParams);
+
+    const processedWorks = works.map(work => ({
+      ...work,
+      is_custom: Boolean(work.is_custom),
+      is_sample: Boolean(work.is_sample)
+    }));
+
+    const totalPages = Math.ceil(totalWorks / parseInt(limit));
+    const hasMore = pageNumber < totalPages;
+
+    res.json({
+      works: processedWorks,
+      pagination: {
+        page: pageNumber,
+        limit: parseInt(limit),
+        total: totalWorks,
+        totalPages,
+        hasMore
+      },
+      hasMore,
+      filters: {
+        category,
+        subcategory,
+        search,
+        sort
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching works:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Failed to fetch works',
+      details: error.message
+    });
+  }
+};
