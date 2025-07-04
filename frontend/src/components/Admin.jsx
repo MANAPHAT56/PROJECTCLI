@@ -44,6 +44,7 @@ const AdminDashboard = () => {
   const [subcategories, setSubcategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedSubcategory, setSelectedSubCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState(''); // 'add', 'edit', 'delete'
@@ -51,6 +52,7 @@ const AdminDashboard = () => {
   const [gridView, setGridView] = useState(true);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [pagination, setPagination] = useState({});
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
     let newProductId,newCategoryId,newSubcategoryId;
   const limit = 12;
  const navigateToProductsImage = (productId) => {
@@ -59,6 +61,15 @@ const AdminDashboard = () => {
     navigate(`/images/${productId}`);
     // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
   };
+    useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 1000); // รอ 1 วินาที
+
+    return () => {
+      clearTimeout(handler); // ถ้าผู้ใช้ยังพิมพ์อยู่ ให้เคลียร์ timeout เดิม
+    };
+  }, [searchTerm]);
   // Form states
   const [formData, setFormData] = useState({
     name: '',
@@ -72,6 +83,9 @@ const AdminDashboard = () => {
   },[currentPage]);
  console.log("reloadunderFormdata")
   // Mock data
+  const filteredSubcategories = subcategories.filter(
+  (sub) => sub.category_id === parseInt(selectedCategory)
+);
 useEffect(() => {
   if (currentlyFocusedField === 'description' && descriptionRef.current) {
     const el = descriptionRef.current;
@@ -100,22 +114,37 @@ useEffect(() => {
     el.setSelectionRange(length, length);
   }
 }, [formData, currentlyFocusedField]);
- useEffect(() => {
-    axios.get(`http://localhost:5000/api/admin/products?page=${currentPage}&limit=${limit}`).then((res) => {
+useEffect(() => {
+  const params = new URLSearchParams();
+  params.append("page", currentPage);
+  params.append("limit", limit);
+
+  if (selectedCategory && selectedCategory!="all") {
+    params.append("categoryId", selectedCategory);
+  }
+
+  if (selectedSubcategory && selectedSubcategory!="all") {
+    params.append("subcategoryId", selectedSubcategory);
+  }
+  if (searchTerm) {
+  params.append("searchTerm", searchTerm);
+}
+
+  axios
+    .get(`http://localhost:5000/api/admin/products?${params.toString()}`)
+    .then((res) => {
       setProducts(res.data.data);
       setPagination(res.data.pagination);
     });
-  }, [currentPage]);
+}, [currentPage, selectedCategory, selectedSubcategory,debouncedSearchTerm]);
   useEffect(() => {
     axios.get(`http://localhost:5000/api/admin/Categories`).then((res) => {
      setCategories(res.data.categories);
-     console.log("Cres"+res.data.categories)
     });
   }, []);
     useEffect(() => {
     axios.get(`http://localhost:5000/api/admin/subcategories`).then((res) => {
       setSubcategories(res.data.subcategories);
-      console.log("SubCa"+res.data.subcategories)
     });
   }, []);
 
@@ -239,7 +268,9 @@ useEffect(() => {
       ...newProductData,
       id: newProductId // ใช้ ID จาก server หรือสร้างชั่วคราว
     }]);
-          //  console.log(newProductId.productId+"newProdcutId data");
+    if(productId.productId!=undefined){
+       navigateToProductsImage(productId.productId)
+    }
     } catch (error) {
         console.error('Error updating product:', error);
     } 
@@ -609,6 +640,7 @@ useEffect(() => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
+              autoFocus
               type="text"
               placeholder="ค้นหาสินค้า..."
               value={searchTerm}
@@ -620,7 +652,9 @@ useEffect(() => {
           <div className="flex gap-2">
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => {setSelectedCategory(e.target.value);
+                  setSelectedSubCategory("all"); // reset subcategory ทุกครั้งที่เปลี่ยนหมวดหลัก
+              }}
               className="px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value="all">ทุกหมวดหมู่</option>
@@ -631,7 +665,20 @@ useEffect(() => {
                 </option>
               ))}
             </select>
-            
+            {selectedCategory !== "all" && (
+    <select
+      value={selectedSubcategory}
+      onChange={(e) => setSelectedSubCategory(e.target.value)}
+      className="px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+    >
+      <option value="all">ทุกหมวดย่อย</option>
+      {filteredSubcategories.map((sub) => (
+        <option key={sub.id} value={sub.id}>
+          {sub.name}
+        </option>
+      ))}
+    </select>
+  )}
             <button
               onClick={() => setGridView(!gridView)}
               className="px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-gray-300 hover:text-white transition-colors"
@@ -1019,20 +1066,23 @@ useEffect(() => {
                     placeholder="จำนวนสต็อก"
                   />
                 </div>
-                <div className="mt-4">
-        <button
-          type="button"
-          onClick={() => {
-            // เก็บข้อมูลแบบฟอร์มชั่วคราวก่อนไปหน้าจัดการรูปภาพ
-            // localStorage.setItem('productFormDraft', JSON.stringify(formData));
-            navigateToProductsImage(formData.id);
-            
-          }}
-          className="mt-2 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2"
-        > 
-          <ImageIcon size={16} />
-          จัดการรูปภาพสินค้า
-        </button>
+                <div className="mt-2">
+      {modalType !== 'add' && ( // Added conditional rendering here
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // เก็บข้อมูลแบบฟอร์มชั่วคราวก่อนไปหน้าจัดการรูปภาพ
+                        // localStorage.setItem('productFormDraft', JSON.stringify(formData));
+                        navigateToProductsImage(formData.id);
+                      }}
+                      className="mt-2 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2"
+                    > 
+                      <ImageIcon size={16} />
+                      จัดการรูปภาพสินค้า
+                    </button>
+                  </div>
+                )}
         
       </div>
               </div>

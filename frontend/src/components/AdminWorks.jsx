@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Edit3,
   Trash2,
@@ -28,6 +30,7 @@ import {
   ImageIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 const WorksAdminManagement = () => {
   // State Management
   const [works, setWorks] = useState([]);
@@ -38,7 +41,11 @@ const WorksAdminManagement = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate=useNavigate();
+    const [showCustomInput, setShowCustomInput] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedSubcategory, setSelectedSubCategory] = useState('all');
   // UI State
+      const [pagination, setPagination] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create', 'edit', 'view'
   const [selectedWork, setSelectedWork] = useState(null);
@@ -49,7 +56,18 @@ const WorksAdminManagement = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterSubcategory, setFilterSubcategory] = useState('all');
   const [filterType, setFilterType] = useState('all'); // 'all', 'custom', 'sample'
-
+  const limit=12;
+  const [currentPage, setCurrentPage] = useState(1);
+ const handleChangeDropdown = (e) => {
+    const value = e.target.value;
+    if (value === "custom") {
+      setShowCustomInput(true);
+      setFormData({ ...formData, product_reference_id: "" });
+    } else {
+      setShowCustomInput(false);
+      setFormData({ ...formData, product_reference_id: value });
+    }
+  };
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -65,7 +83,29 @@ const WorksAdminManagement = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const API_BASE_URL = 'http://localhost:5000/api';
+useEffect(() => {
+  const params = new URLSearchParams();
+  params.append("page", currentPage);
+  params.append("limit", limit);
 
+  if (selectedCategory && selectedCategory!="all") {
+    params.append("category", selectedCategory);
+  }
+
+  if (selectedSubcategory && selectedSubcategory!="all") {
+    params.append("subcategory", selectedSubcategory);
+  }
+  if (searchTerm) {
+  params.append("searchTerm", searchTerm);
+}
+
+  axios
+    .get(`http://localhost:5000/api/works/home?${params.toString()}`)
+    .then((res) => {
+      setProducts(res.data.data);
+      setPagination(res.data.pagination);
+    });
+}, [currentPage, selectedCategory, selectedSubcategory]);
   // Validation Rules
   const validateForm = useCallback(() => {
     const errors = {};
@@ -302,6 +342,10 @@ const WorksAdminManagement = () => {
     console.log(result.worksId)
       if (modalMode === 'create') {
         setWorks(prev => [...prev, {...newWorksData,id: result.worksId}]);
+         if(result.worksId!=undefined){
+            NavigateTOWorks(result.worksId,newWorksData.main_category_id,newWorksData.subcategory_id);
+         }
+      
 } else {
         setWorks(prev => prev.map(work =>
           work.id === selectedWork.id ? { ...work, ...newWorksData } : work
@@ -483,6 +527,7 @@ const WorksAdminManagement = () => {
               <select
                 value={filterCategory}
                 onChange={(e) => {
+                  setSelectedCategory(e.target.value);
                   setFilterCategory(e.target.value);
                   setFilterSubcategory('all'); // Reset subcategory filter when category changes
                 }}
@@ -501,7 +546,10 @@ const WorksAdminManagement = () => {
             <div className="relative">
               <select
                 value={filterSubcategory}
-                onChange={(e) => setFilterSubcategory(e.target.value)}
+                 onChange={(e) => {
+                  setSelectedSubCategory(e.target.value);
+                setFilterSubcategory(e.target.value)
+                }}
                 className="block appearance-none w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8"
                 disabled={filterCategory === 'all' || !subcategories.length} // Disable if no category selected or no subcategories
               >
@@ -711,7 +759,41 @@ const WorksAdminManagement = () => {
             ))}
           </div>
         )}
-
+      {pagination.total > 1 && (
+           <div className="flex items-center justify-center gap-2 mt-8">
+             <button
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+               disabled={currentPage === 1}
+               className="flex items-center px-3 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+             >
+               <ChevronLeft size={16} className="mr-1" />
+               ก่อนหน้า
+             </button>
+   
+             {Array.from({ length: pagination.page }, (_, i) => i + 1).map((page) => (
+               <button
+                 key={pagination.page}
+                 onClick={() => setCurrentPage(pagination.page)}
+                 className={`px-3 py-2 text-sm rounded-lg ${
+                   currentPage === pagination.page
+                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                 }`}
+               >
+                 {page}
+               </button>
+             ))}
+   
+             <button
+              onClick={() => setCurrentPage(p => Math.min(p + 1, pagination.total))}
+               disabled={currentPage === pagination.page}
+               className="flex items-center px-3 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+             >
+               ถัดไป
+               <ChevronRight size={16} className="ml-1" />
+             </button>
+           </div>
+         )}
         {/* Modal */}
      {showModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -819,6 +901,7 @@ const WorksAdminManagement = () => {
                   </div>
 
                   {/* Simplified Image Management Section */}
+              {modalMode !== 'create' && (
                   <div className="bg-slate-900/30 border border-slate-600 rounded-xl p-4">
                     <div className="flex items-center justify-between">
                       <button
@@ -831,7 +914,7 @@ const WorksAdminManagement = () => {
                       </button>
                     </div>
                   </div>
-
+              )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="main_category_id" className="block text-slate-300 text-sm font-medium mb-1">หมวดหมู่หลัก <span className="text-red-400">*</span></label>
@@ -839,7 +922,10 @@ const WorksAdminManagement = () => {
                         <select
                           id="main_category_id"
                           value={formData.main_category_id}
-                          onChange={(e) => setFormData({ ...formData, main_category_id: e.target.value })}
+                          onChange={(e) => {
+  setFormData({ ...formData, main_category_id: e.target.value }); 
+  setSelectedCategory(e.target.value);
+}}
                           className={`block appearance-none w-full px-4 py-2 bg-slate-900/50 border ${formErrors.main_category_id ? 'border-red-500' : 'border-slate-600'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8`}
                         >
                           <option value="">เลือกหมวดหมู่หลัก</option>
@@ -860,7 +946,10 @@ const WorksAdminManagement = () => {
                         <select
                           id="subcategory_id"
                           value={formData.subcategory_id}
-                          onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })}
+                                                 onChange={(e) => {
+  setFormData({ ...formData, subcategory_id: e.target.value }); 
+  setSelectedSubCategory(e.target.value)
+}}
                           className={`block appearance-none w-full px-4 py-2 bg-slate-900/50 border ${formErrors.subcategory_id ? 'border-red-500' : 'border-slate-600'} rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8`}
                           disabled={!formData.main_category_id || subcategories.length === 0}
                         >
@@ -882,17 +971,32 @@ const WorksAdminManagement = () => {
                     <div className="relative">
                       <select
                         id="product_reference_id"
-                        value={formData.product_reference_id}
-                        onChange={(e) => setFormData({ ...formData, product_reference_id: e.target.value })}
+                          value={showCustomInput ? "custom" : formData.product_reference_id}
+
+                        onChange={handleChangeDropdown}
                         className="block appearance-none w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8"
                       >
                         <option value="">ไม่มี</option>
+                         <option value="custom">อื่นๆ (พิมพ์ ID เอง)</option>
                         {products.map(prod => (
                           <option key={prod.id} value={prod.id}>{prod.name}</option>
                         ))}
                       </select>
                       <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" />
+                       {showCustomInput && (
+        <input
+          type="text"
+          placeholder="ใส่ ID เอง"
+          value={formData.product_reference_id}
+          onChange={(e) =>
+            setFormData({ ...formData, product_reference_id: e.target.value })
+          }
+          className="mt-2 w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+        />
+      )}
                     </div>
+                         
+
                   </div>
 
                   <div className="flex items-center gap-4">

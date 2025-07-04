@@ -400,7 +400,7 @@ const WorksImageManager = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+    <div className="mt-15 min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
       {/* Mobile Header */}
       <div className="lg:hidden sticky top-0 z-40 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700/50 px-4 py-3">
         <div className="flex items-center justify-between">

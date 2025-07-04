@@ -4,7 +4,7 @@ const db = require('../db');
 exports.getWorksHome = async (req, res) => {
   try {
     const {
-      page = 1,
+      page,
       limit = 12,
       category,
       subcategory,

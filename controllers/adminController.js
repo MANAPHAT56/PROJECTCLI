@@ -1,35 +1,74 @@
 const db = require('../db'); // สมมุติว่ามีโมดูล db สำหรับเชื่อมต่อฐานข้อมูล
-exports.getProducts=async (req,res)=>{
-    const page = parseInt(req.query.page) || 1;
-const limit = parseInt(req.query.limit) || 12;
-const offset = (page - 1) * limit;
-    const [products] =await db.query( `SELECT 
-  p.id,
-  p.name,
-  p.price,
-  p.description,
-  p.image_Main_path AS image_Main_path,
-  p.category_id,
-  p.subcategory_id,
-  p.stock,
-  p.total_purchases,
-  p.monthly_purchases,
-  p.created_at
-FROM Products p
-ORDER BY p.created_at DESC
-LIMIT ? OFFSET ?;
-`,[limit, offset]);
-const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM Products`);
-res.json({
-  data: products,
-  pagination: {
-    total,
-    page,
-    pageSize: limit,
-    totalPages: Math.ceil(total / limit),
-  }});
- 
-}
+exports.getProducts = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const offset = (page - 1) * limit;
+
+  const { categoryId, subcategoryId, searchTerm } = req.query;
+
+  let whereClauses = [];
+  let params = [];
+
+  // กรองหมวดหมู่
+  if (categoryId) {
+    whereClauses.push('p.category_id = ?');
+    params.push(categoryId);
+  }
+
+  if (subcategoryId) {
+    whereClauses.push('p.subcategory_id = ?');
+    params.push(subcategoryId);
+  }
+
+  // กรองจาก searchTerm (ค้นชื่อหรือ id)
+  if (searchTerm) {
+    whereClauses.push('(p.name LIKE ? OR p.id = ?)');
+    params.push(`%${searchTerm}%`);
+    params.push(Number(searchTerm) || 0); // แปลงเป็น number เผื่อเทียบกับ id
+  }
+
+  const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  // ดึงสินค้าตามเงื่อนไข
+  const [products] = await db.query(
+    `
+    SELECT 
+      p.id,
+      p.name,
+      p.price,
+      p.description,
+      p.image_Main_path AS image_Main_path,
+      p.category_id,
+      p.subcategory_id,
+      p.stock,
+      p.total_purchases,
+      p.monthly_purchases,
+      p.created_at
+    FROM Products p
+    ${whereSQL}
+    ORDER BY p.created_at DESC
+    LIMIT ? OFFSET ?;
+  `,
+    [...params, limit, offset]
+  );
+
+  // นับจำนวนรวมทั้งหมด
+  const [[{ total }]] = await db.query(
+    `SELECT COUNT(*) AS total FROM Products p ${whereSQL};`,
+    params
+  );
+
+  res.json({
+    data: products,
+    pagination: {
+      total,
+      page,
+      pageSize: limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
+};
+
 exports.InsertNewProducts = async(req,res)=>{
   const productData = req.body;
    // Validate numeric fields
@@ -345,60 +384,108 @@ exports.EditSubcategory = async (req, res) => {
     const { subcategoryId } = req.params;
     const subcategoryData = req.body;
 
-    // Validate and convert numeric fields
-    // category_id might be updated, so parse it if present
-    if (subcategoryData.category_id !== undefined) {
-        subcategoryData.category_id = parseInt(subcategoryData.category_id);
-    }
-
-    // Default values if not provided from frontend (adjust as needed)
-    subcategoryData.description = subcategoryData.description || null;
-    subcategoryData.image_path = subcategoryData.image_path || null;
-    subcategoryData.icon = subcategoryData.icon || null;
-    subcategoryData.gradient = subcategoryData.gradient || 'from-purple-600 to-blue-600';
-    subcategoryData.bgGradient = subcategoryData.bgGradient || 'from-purple-600 to-blue-600';
-    subcategoryData.accentColor = subcategoryData.accentColor || '#FFFFFF';
-
-
-    const query = `
-        UPDATE subcategories
-        SET
-            name = ?,
-            description = ?,
-            image_path = ?,
-            category_id = ?,
-            icon = ?,
-            gradient = ?,
-            bgGradient = ?,
-            accentColor = ?
-        WHERE id = ?;
-    `;
-    const values = [
-        subcategoryData.name,
-        subcategoryData.description,
-        subcategoryData.image_path,
-        subcategoryData.category_id,
-        subcategoryData.icon,
-        subcategoryData.gradient,
-        subcategoryData.bgGradient,
-        subcategoryData.accentColor,
-        subcategoryId
-    ];
+    // เริ่ม Transaction
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
 
     try {
-        const [result] = await db.query(query, values);
+        // 1. ตรวจสอบ category ใหม่ว่ามีจริงหรือไม่ (ถ้ามีการเปลี่ยน)
+        if (subcategoryData.category_id) {
+            const [categoryCheck] = await connection.query(
+                'SELECT id FROM Categories WHERE id = ?',
+                [subcategoryData.category_id]
+            );
+            if (categoryCheck.length === 0) {
+                await connection.rollback();
+                return res.status(404).json({
+                    success: false,
+                    message: 'ไม่พบหมวดหมู่หลักที่ระบุ'
+                });
+            }
+        }
+
+        // 2. อัปเดต subcategory
+        const [currentSubcategory] = await connection.query(
+            'SELECT category_id FROM subcategories WHERE id = ?', 
+            [subcategoryId]
+        );
+
+        const updateQuery = `
+            UPDATE subcategories
+            SET
+                name = ?,
+                description = ?,
+                image_path = ?,
+                category_id = ?,
+                icon = ?,
+                gradient = ?,
+                bgGradient = ?,
+                accentColor = ?
+            WHERE id = ?;
+        `;
+        
+        const values = [
+            subcategoryData.name || null,
+            subcategoryData.description || null,
+            subcategoryData.image_path || null,
+            subcategoryData.category_id || currentSubcategory[0].category_id,
+            subcategoryData.icon || null,
+            subcategoryData.gradient || 'from-purple-600 to-blue-600',
+            subcategoryData.bgGradient || 'from-purple-600 to-blue-600',
+            subcategoryData.accentColor || '#FFFFFF',
+            subcategoryId
+        ];
+
+        const [result] = await connection.query(updateQuery, values);
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'ไม่พบหมวดหมู่ย่อยเพื่อทำการแก้ไข หรือไม่มีการเปลี่ยนแปลงข้อมูล' });
+            await connection.rollback();
+            return res.status(404).json({ 
+                success: false, 
+                message: 'ไม่พบหมวดหมู่ย่อยเพื่อทำการแก้ไข' 
+            });
         }
 
-        res.json({ success: true, message: 'แก้ไขหมวดหมู่ย่อยสำเร็จ'});
-    } catch (error) {
-        console.error('Error editing subcategory:', error);
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({ success: false, message: 'ชื่อหมวดหมู่ย่อยนี้มีอยู่แล้วในหมวดหมู่หลักนี้' });
+        // 3. ถ้าเปลี่ยน category_id ให้อัปเดตตารางที่เกี่ยวข้อง
+        if (subcategoryData.category_id && 
+            subcategoryData.category_id !== currentSubcategory[0].category_id) {
+            
+            // อัปเดต Works
+            await connection.query(`
+                UPDATE Works
+                SET main_category_id = ?
+                WHERE subcategory_id = ?
+            `, [subcategoryData.category_id, subcategoryId]);
+
+            // อัปเดต Products
+            await connection.query(`
+                UPDATE Products
+                SET category_id = ?
+                WHERE subcategory_id = ?
+            `, [subcategoryData.category_id, subcategoryId]);
         }
-        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขหมวดหมู่ย่อย' });
+
+        await connection.commit();
+        res.json({ success: true, message: 'แก้ไขหมวดหมู่ย่อยสำเร็จ' });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error editing subcategory:', error);
+        
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ 
+                success: false, 
+                message: 'ชื่อหมวดหมู่ย่อยนี้มีอยู่แล้วในหมวดหมู่หลักนี้' 
+            });
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            message: 'เกิดข้อผิดพลาดในการแก้ไขหมวดหมู่ย่อย',
+            error: error.message // เพิ่มเพื่อ debug
+        });
+    } finally {
+        connection.release();
     }
 };
 exports.DeleteSubcategory = async (req, res) => {

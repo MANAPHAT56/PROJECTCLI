@@ -131,7 +131,7 @@ const ProductImageManager = () => {
           id: fileId,
           image_path: previewUrl,
           display_order: images.length + uploadedImages.length + 1,
-          isMain: images.length === 0 && uploadedImages.length === 0,
+          isMain: false,
           isUploading: true,
           file: file
         };
@@ -147,7 +147,7 @@ const ProductImageManager = () => {
             id: result.imageId,
             image_path: result.imagePath,
             display_order: result.displayOrder,
-            isMain: images.length === 0 && uploadedImages.length === 0,
+            isMain: false,
             isUploading: false
           };
           
