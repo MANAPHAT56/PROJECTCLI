@@ -37,7 +37,7 @@ const SubcategoryProductDetail = () => {
   const [zoomImage, setZoomImage] = useState('');
 
   const navigate = useNavigate();
-
+ const apiBaseUrl ="http://localhost:5000"
   const handleViewDetails = (productId) => {
     console.log(productId);
     navigate(`/detailProducts/${productId}`);
@@ -48,7 +48,7 @@ const SubcategoryProductDetail = () => {
   console.log(productId);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/store/product/${productId}`)
+    fetch(`${apiBaseUrl}/api/store/product/${productId}`)
       .then(res => res.json())
       .then(data => setProductData(data))
       .catch(err => console.error('Error fetching product data:', err));
@@ -61,7 +61,7 @@ const SubcategoryProductDetail = () => {
   }, []); // Empty dependency array means this runs once after initial render
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/store/RealatedPdeatail/${productId}`)
+    fetch(`${apiBaseUrl}/api/store/RealatedPdeatail/${productId}`)
       .then(res => res.json())
       .then(data => setRelatedProducts(data))
       .catch(err => console.error('Error fetching related products:', err));

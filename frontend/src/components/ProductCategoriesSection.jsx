@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Phone, Mail, Search, ChevronRight, Loader } from 'lucide-react'; // Import Loader for general use
+import { MessageCircle, Phone, Mail, Search, ChevronRight, Loader, ShoppingCart } from 'lucide-react'; // Import ShoppingCart
 import { useNavigate } from 'react-router-dom';
 import  Contact from './footer'
-
+ const apiBaseUrl  = "http://localhost:5000";
 // --- Skeleton Components ---
 
 // Skeleton for a Product Card
@@ -21,7 +21,7 @@ const ProductCardSkeleton = ({ index }) => (
       <div className="h-5 bg-gray-200 rounded w-3/4"></div> {/* Product name line 2 */}
       <div className="flex items-center justify-between mt-4">
         <div className="h-6 bg-gray-200 rounded w-1/4"></div> {/* Price placeholder */}
-        <div className="w-5 h-5 bg-gray-200 rounded-full"></div> {/* Chevron placeholder */}
+        <div className="w-8 h-8 bg-gray-200 rounded-full"></div> {/* Cart button placeholder */}
       </div>
     </div>
   </div>
@@ -142,7 +142,7 @@ const NewProductsSection = () => {
 
   useEffect(() => {
     setLoading(true); // Set loading to true when fetching starts
-    fetch(`http://localhost:5000/api/store/newproductsHome`)
+    fetch(`${apiBaseUrl}/api/store/newproductsHome`)
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error('Error fetching new products:', err))
@@ -175,7 +175,7 @@ const NewProductsSection = () => {
             : displayedProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="bg-white rounded-lg md:rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:transform hover:-translate-y-2 border border-slate-200 hover:border-blue-500 group"
+                className="bg-white rounded-lg md:rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-200 hover:border-blue-500 group relative"
               >
                 <div className="relative overflow-hidden h-32 md:h-56 bg-slate-100">
                   <img
@@ -184,15 +184,6 @@ const NewProductsSection = () => {
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     loading="lazy"
                   />
-
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-blue-800/90 opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center backdrop-blur-sm">
-                    <button onClick={() => navigateToProduct(product.id)} className="bg-white text-slate-800 px-3 py-1.5 md:px-6 md:py-3 rounded-full font-semibold flex items-center gap-1 md:gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 hover:scale-105 shadow-lg text-xs md:text-base">
-                      <Search size={12} className="md:w-4 md:h-4" />
-                      <span className="hidden md:inline">ดูรายละเอียด</span>
-                      <span className="md:hidden">ดู</span>
-                    </button>
-                  </div>
 
                   {/* Badge */}
                   <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-1 md:px-4 md:py-2 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
@@ -207,7 +198,9 @@ const NewProductsSection = () => {
                   </h3>
                   <div className="flex items-center justify-between">
                     <span className="text-lg md:text-2xl font-extrabold text-blue-600">฿{product.price}</span>
-                    <ChevronRight size={16} className="md:w-5 md:h-5 text-slate-400" />
+                      <button onClick={() => navigateToProduct(product.id)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
+                                  <ShoppingCart size={14} /> 
+                                </button>
                   </div>
                 </div>
               </div>
@@ -240,14 +233,13 @@ const TopsellerProductsSection = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true); // Add loading state
   const navigate = useNavigate();
-
   const navigateToProduct = (productId) => {
-   window.location.href = `/detailProducts/${productId}`;
+    navigate(`/detailProducts/${productId}`);
   };
 
   useEffect(() => {
     setLoading(true); // Set loading to true when fetching starts
-    fetch(`http://localhost:5000/api/store/topsellerHome`)
+    fetch(`${apiBaseUrl}/api/store/topsellerHome`)
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error('Error fetching top seller products:', err))
@@ -280,7 +272,7 @@ const TopsellerProductsSection = () => {
             : displayedProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="bg-white rounded-lg md:rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:transform hover:-translate-y-2 border border-slate-200 hover:border-blue-500 group"
+                className="bg-white rounded-lg md:rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-200 hover:border-blue-500 group relative"
               >
                 <div className="relative overflow-hidden h-32 md:h-56 bg-slate-100">
                   <img
@@ -290,19 +282,9 @@ const TopsellerProductsSection = () => {
                     loading="lazy"
                   />
 
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-blue-800/90 opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center backdrop-blur-sm">
-                    <button onClick={() => navigateToProduct(product.id)} className="bg-white text-slate-800 px-3 py-1.5 md:px-6 md:py-3 rounded-full font-semibold flex items-center gap-1 md:gap-2 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 hover:scale-105 shadow-lg text-xs md:text-base">
-                      <Search size={12} className="md:w-4 md:h-4" />
-                      <span className="hidden md:inline">ดูรายละเอียด</span>
-                      <span className="md:hidden">ดู</span>
-                    </button>
-                  </div>
-
                   {/* Badge */}
-                  {/* Assuming 'ใหม่' badge is only for new products, you might want to remove this or make it conditional for top sellers */}
-                  <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-2 py-1 md:px-4 md:py-2 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
-                    ใหม่ {/* Consider changing this badge for top sellers */}
+                  <div className="absolute top-2 right-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-2 py-1 md:px-4 md:py-2 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
+                    ขายดี
                   </div>
                 </div>
 
@@ -313,7 +295,9 @@ const TopsellerProductsSection = () => {
                   </h3>
                   <div className="flex items-center justify-between">
                     <span className="text-lg md:text-2xl font-extrabold text-blue-600">฿{product.price}</span>
-                    <ChevronRight size={16} className="md:w-5 md:h-5 text-slate-400" />
+                      <button onClick={() => navigateToProduct(product.id)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
+                                  <ShoppingCart size={14} /> 
+                                </button>
                   </div>
                 </div>
               </div>
@@ -353,7 +337,7 @@ const ProductCategoriesSection = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setLoading(true); // Set loading to true when fetching starts
-    fetch(`http://localhost:5000/api/store/Categorieshome`)
+    fetch(`${apiBaseUrl}/api/store/Categorieshome`)
       .then(res => res.json())
       .then(data => setCategories(data))
       .catch(err => console.error('Error fetching categories:', err))

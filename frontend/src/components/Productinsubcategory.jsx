@@ -24,7 +24,7 @@
     const [error, setError] = useState(null);
     const {subcategoryId} = useParams(); // Mock subcategory ID
     const productsPerPage = 12;
-    const apiBaseUrl = 'http://localhost:5000/api/store/subcategoryP';
+    const apiBaseUrl = 'http://localhost:5000';
    useEffect(() => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }, []);
@@ -54,7 +54,7 @@
           sort: sortBy,
           search: searchTerm.trim()
         });
-      const response = await fetch(`${apiBaseUrl}/${subcategoryId}?${params.toString()}`);
+      const response = await fetch(`${apiBaseUrl}/api/store/subcategoryP/${subcategoryId}?${params.toString()}`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

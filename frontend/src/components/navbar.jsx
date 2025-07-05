@@ -19,9 +19,9 @@ const ModernNavbar = () => {
 
   const useNavigationItems = () => {
   const [categories, setCategories] = useState([]);
-
+       const apiBaseUrl = 'http://localhost:5000';
   useEffect(() => {
-    fetch('http://localhost:5000/api/store/CategoryNav') // URL นี้ให้เปลี่ยนตาม API ของคุณ
+    fetch(`${apiBaseUrl}/api/store/CategoryNav`) // URL นี้ให้เปลี่ยนตาม API ของคุณ
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch((err) => console.error('Error fetching categories:', err));

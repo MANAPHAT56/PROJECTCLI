@@ -10,11 +10,11 @@ const ProductShowcase = () => {
   const [animatedCards, setAnimatedCards] = useState(new Set());
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true); // Add loading state
-
-  useEffect(() => {
+  const apiBaseUrl = "http://localhost:5000"
+  useEffect(()  => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setLoading(true); // Set loading to true when fetching starts
-    fetch('http://localhost:5000/api/store/categories/')
+    fetch(`${apiBaseUrl}/api/store/categories/`)
       .then(res => res.json())
       .then(data => {
         setCategories(data);

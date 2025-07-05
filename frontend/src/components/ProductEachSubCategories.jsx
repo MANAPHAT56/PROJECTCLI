@@ -19,14 +19,14 @@ const ProductShowcase = () => {
   navigate(`/detailProducts/${productId}`);
   };
 
- 
+ const apiBaseUrl = "http://localhost:5000"
 
   useEffect( () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     const loadData = async () => {
     setLoading(true); // เริ่มต้น loading
     try {
-      const response = await fetch(`http://localhost:5000/api/store/subcategories/${categoryId}`);
+      const response = await fetch(`${apiBaseUrl}/api/store/subcategories/${categoryId}`);
       const data = await response.json();
       setCategories(data);
     } catch (err) {
