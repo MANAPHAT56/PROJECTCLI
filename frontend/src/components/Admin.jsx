@@ -54,6 +54,7 @@ const AdminDashboard = () => {
     const [pagination, setPagination] = useState({});
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
     let newProductId,newCategoryId,newSubcategoryId;
+    const apiBaseUrl = "https://"
   const limit = 12;
  const navigateToProductsImage = (productId) => {
     // สำหรับการทดสอบ เราจะใช้ alert แต่ในระบบจริงคุณจะใช้ router

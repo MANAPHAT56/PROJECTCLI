@@ -31,7 +31,7 @@ const WorksImageManager = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
-   
+       const apiBaseUrl = 'http://localhost:5000';
   // Mock workId, category, subcategory - ในการใช้งานจริงจะได้จาก URL params
   const {workId,categoryId,subcategoryId} = useParams();
 
@@ -46,7 +46,7 @@ const WorksImageManager = () => {
   // โหลดข้อมูล Work
   const loadWorkData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/works/works/${workId}`);
+      const response = await fetch(`${apiBaseUrl}/api/works/works/${workId}`);
       const data = await response.json();
       console.log(data)
       setWorkData(data);
@@ -59,7 +59,7 @@ const WorksImageManager = () => {
   // โหลดรูปภาพทั้งหมด
   const loadImages = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/images/works/${workId}/images`);
+      const response = await fetch(`${apiBaseUrl}/api/images/works/${workId}/images`);
       const data = await response.json();
       if (data.success) {
         // Ensure main image is always first, then sort others by display_order
@@ -86,7 +86,7 @@ const WorksImageManager = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/images/works/upload/${workId}`,
+        `${apiBaseUrl}/api/images/works/upload/${workId}`,
         {
           method: 'POST',
           body: formData,
@@ -269,7 +269,7 @@ const WorksImageManager = () => {
     showNotification('กำลังเปลี่ยนรูปภาพหลัก...');
 
     try {
-      const response = await fetch(`http://localhost:5000/api/images/works/${workId}/set-main`, {
+      const response = await fetch(`${apiBaseUrl}/api/images/works/${workId}/set-main`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageId: imageId, isMain: true }),
@@ -307,7 +307,7 @@ const WorksImageManager = () => {
     showNotification('กำลังลบรูปภาพ...');
     try {
       const response = await fetch(
-        `http://localhost:5000/api/images/works/delete/${categoryId}/${subcategoryId}/${workId}/${imageId}`,
+        `${apiBaseUrl}/api/images/works/delete/${categoryId}/${subcategoryId}/${workId}/${imageId}`,
         { method: 'DELETE' }
       );
 
@@ -337,7 +337,7 @@ const WorksImageManager = () => {
           displayOrder: img.display_order
         }));
 
-      const response = await fetch(`http://localhost:5000/api/images/works/reorder/${workId}`, {
+      const response = await fetch(`${apiBaseUrl}/api/images/works/reorder/${workId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -395,7 +395,7 @@ const WorksImageManager = () => {
       return   "https://cdn.toteja.co/"+imagePath; // For temporary local previews
     }
     // Encode the imagePath because it's part of the URL path for backend
-    return `http://localhost:5000/api/images/works/view/${encodeURIComponent(imagePath)}`;
+    return `${apiBaseUrl}/api/images/works/view/${encodeURIComponent(imagePath)}`;
   };
 
   return (

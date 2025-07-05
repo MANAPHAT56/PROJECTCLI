@@ -21,13 +21,13 @@ const  footer = () =>(
               <h3 className="text-xl font-bold mb-4 text-cyan-400">บริการลูกค้า</h3>
               <div className="space-y-2 text-gray-300">
                 <p className="flex items-center">
-                  <span className="mr-2">📞</span> 02-xxx-xxxx
+                  <span className="mr-2">📞</span> 081-424-4696 คุณแก้ว<br />0814496226 คุณ Paul
                 </p>
                 <p className="flex items-center">
-                  <span className="mr-2">📧</span> support@furniture.com
+                  <span className="mr-2">📧</span> PhataraponPT1994@gmail.com
                 </p>
                 <p className="flex items-center">
-                  <span className="mr-2">🕒</span> จันทร์-เสาร์ 09:00-18:00
+                  <span className="mr-2">🕒</span> จันทร์-ศุกร์ 09:00-17:00
                 </p>
                 <p className="flex items-center">
                   <span className="mr-2">💬</span> แชทสด 24/7

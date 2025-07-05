@@ -14,6 +14,7 @@ import {
   Printer
 } from 'lucide-react';
 import { useEffect } from 'react';
+import Contact from './footer'
 export default function PhothongOrderProcess() {
       useEffect(()=>{
          window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -349,24 +350,7 @@ export default function PhothongOrderProcess() {
         </section>
 
         {/* Footer */}
-        <footer className="backdrop-blur-sm bg-white/5 border-t border-white/10 py-6 sm:py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row items-center justify-between">
-              <div className="flex items-center space-x-3 mb-4 sm:mb-0">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-lg flex items-center justify-center">
-                  <Printer className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-white font-semibold text-sm sm:text-base">โพธิ์ทอง พริ้นติ้ง</span>
-              </div>
-              <p className="text-blue-200 text-xs sm:text-sm text-center sm:text-right">
-                © 2024 Phothong Printing (Thailand) Co.,Ltd. 
-                <br className="sm:hidden" />
-                <span className="hidden sm:inline"> | </span>
-                All rights reserved.
-              </p>
-            </div>
-          </div>
-        </footer>
+        <Contact/>
       </div>
     </div>
   );
