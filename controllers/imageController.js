@@ -27,7 +27,7 @@ const upload = multer({ dest: '/tmp/uploads' });
 exports.uploadImage = [
   upload.single('image'),
   async (req, res) => {
-    const { category, subcategory, productId } = req.params;
+    const {  productId } = req.params;
     const file = req.file;
 
     if (!file) {
@@ -39,7 +39,7 @@ exports.uploadImage = [
       const timestamp = Date.now();
       const ext = path.extname(file.originalname);
       const filename = `${timestamp}${ext}.webp`;
-      const s3Key = `products/${category}/${subcategory}/${productId}/${filename}`;
+      const s3Key = `products/${productId}/${filename}`;
       
       // อัปโหลดไฟล์ไป S3
       const fileStream = fs.createReadStream(file.path);
@@ -312,7 +312,7 @@ exports.SetmainImage = async(req,res)=>{
   exports.uploadImageWorks = [
     upload.single('image'),
     async (req, res) => {
-      const { categoryId, subcategoryId, workId } = req.params;
+      const {  workId } = req.params;
       const file = req.file;
   
       if (!file) {
@@ -324,7 +324,7 @@ exports.SetmainImage = async(req,res)=>{
         const timestamp = Date.now();
         const ext = path.extname(file.originalname);
         const filename = `${timestamp}${ext}.webp`;
-        const s3Key = `works/${categoryId}/${subcategoryId}/${workId}/${filename}`;
+        const s3Key = `works/${workId}/${filename}`;
         
         // อัปโหลดไฟล์ไป S3
         const fileStream = fs.createReadStream(file.path);

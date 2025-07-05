@@ -15,12 +15,12 @@ const Works = React.lazy(() => import('./components/Works'));
 const WorksDetail = React.lazy(() => import('./components/WorksDetail'));
 const ProductImagesManagement = React.lazy(() => import('./components/Imagemenagemant'));
 const WorksImages = React.lazy(()=>import('./components/ImageWorks'))
-
+import { Toaster } from 'react-hot-toast';
 const App = () => {
   return (
     <Router>
       <Navbar />
-
+  <Toaster position="top-center" />
       <Suspense fallback={<div>กำลังโหลดหน้า...</div>}>
         <Routes>
           <Route path="/" element={<ProductCategoriesSection />} />
@@ -44,7 +44,7 @@ const App = () => {
           <Route path="/worksDetail/:workId" element={<WorksDetail />} />
 
           <Route path="/images/:productId" element={<ProductImagesManagement />} />
-          <Route path="/images/works/:workId/:categoryId/:subcategoryId/page"    element= {<WorksImages />}   /> 
+          <Route path="/images/works/:workId/page"    element= {<WorksImages />}   /> 
         </Routes>
       </Suspense>
     </Router>

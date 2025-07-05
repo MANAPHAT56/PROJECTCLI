@@ -3,7 +3,7 @@ const router = express.Router();
 const imageController = require('../controllers/imageController');
 
 // 1. อัปโหลดรูปภาพใหม่ - ตรงกับ Frontend ที่ใช้ใน uploadImageToAPI
-router.post('/upload/:category/:subcategory/:productId', 
+router.post('/upload/:productId', 
   imageController.uploadImage
 );
 router.put('/:productId/set-main',imageController.SetmainImage);
@@ -34,7 +34,7 @@ router.get('/view/:imagePath',
 router.get('works/:workId',imageController.getWorkData)
 router.get('/works/:workId/images',imageController.getWorkImages)
 router.put('/works/:workId/set-main',imageController.setMainImageWorks)
-router.post('/works/upload/:categoryId/:subcategoryId/:workId',imageController.uploadImageWorks)
+router.post('/works/upload/:workId',imageController.uploadImageWorks)
 router.delete('/works/delete/:categoryId/:subcategoryId/:workId/:imageId',imageController.deleteImageWorks)
 router.put('/works/reorder/:workId',imageController.reorderImagesWorks)
 module.exports = router;

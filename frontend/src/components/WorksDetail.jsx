@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams,Link} from 'react-router-dom';
 import { 
   ArrowLeft, Heart, Share2, Download, ExternalLink, Calendar, Tag, Package,
   Zap, Palette, Eye, Bookmark, ImageIcon, Layers, Star, Clock, ChevronLeft,
   ChevronRight, ZoomIn, X, Info, CheckCircle, AlertCircle, FileText, Grid3X3,
-  ShoppingBag, ArrowRight, MoreHorizontal
+  ShoppingBag, ArrowRight, MoreHorizontal, Copy
 } from 'lucide-react';
+import { toast } from 'react-hot-toast'; // หรือใช้ react-toastify ก็ได้
+
 
 const WorksDetail = () => {
+  const [copyData, setCopyData] = useState('');
   const [work, setWork] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,7 +23,6 @@ const WorksDetail = () => {
   const [imageGalleryStartIndex, setImageGalleryStartIndex] = useState(0);
   const { workId } = useParams();
   const API_BASE_URL = 'http://localhost:5000/api/works';
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -346,16 +348,45 @@ const WorksDetail = () => {
               </p>
 
               <div className="space-y-3">
-                <button className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-                  <Eye size={18} /> สั่งซื้อสินค้า
-                </button>
+               <button
+  onClick={() => {
+    const info = `
+📦 ชื่อผลงาน: ${work.name}
+🗓 วันที่สั่ง: ${formatDate(new Date())}
+🆔 ID ผลงาน: ${work.id}
+🔗 ID สินค้าอ้างอิง: ${work.product_reference_id || '-'}
+`.trim();
+  
+    setCopyData(info);
+    navigator.clipboard.writeText(info);
+    toast.success('คัดลอกข้อมูลเรียบร้อยแล้ว!');
+      setTimeout(() => setCopyData(''), 5000); // หายไปหลัง 5 วิ
+  }}
+  className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+>
+  <Eye size={18} /> สั่งซื้อสินค้า
+</button>
                 <div className="grid grid-cols-2 gap-3">
-                  <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
+                  {/* <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
                     <Download size={16} /> ดาวน์โหลด
                   </button>
                   <button className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
                     <ExternalLink size={16} /> เปิดใหม่
-                  </button>
+                  </button> */}
+                  {copyData && (
+  <div className="mt-4 bg-gray-100 border border-gray-300 p-4 rounded-lg relative">
+    <pre className="whitespace-pre-wrap text-sm text-gray-800">{copyData}</pre>
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(copyData);
+        toast.success('คัดลอกอีกครั้งเรียบร้อย');
+      }}
+      className="absolute top-2 right-2 text-sm px-2 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+    >
+      คัดลอก
+    </button>
+  </div>
+)}
                 </div>
               </div>
             </div>
@@ -510,24 +541,33 @@ const WorksDetail = () => {
                 ผลงานที่เกี่ยวข้อง
               </h2>
               <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
-                <span>ดูทั้งหมด</span>
-                <ArrowRight size={16} />
+             <Link to="/works">
+    <span>ดูทั้งหมด</span>
+    <ArrowRight size={16} />
+</Link>
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedWorks.slice(0, 8).map((relatedWork) => (
+                <Link  key={relatedWork.id}
+  to={`/worksDetail/${relatedWork.id}`} // This is the actual navigation trigger
+  className="group cursor-pointer block" // Makes the whole card clickable
+>
                 <div key={relatedWork.id} className="group cursor-pointer">
                   <div className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:border-blue-300">
                     <div className="relative">
-                      <img 
-                        src={"https://cdn.toteja.co/"+relatedWork.cover_image || 'https://via.placeholder.com/300x200?text=No+Image'} 
-                        alt={relatedWork.name}
-                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/300x200?text=No+Image';
-                        }}
-                      />
+<img
+                src={relatedWork.cover_image
+                  ? `https://cdn.toteja.co/${relatedWork.cover_image}`
+                  : 'https://via.placeholder.com/300x200?text=No+Image'
+                }
+                alt={relatedWork.name}
+                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/300x200?text=No+Image';
+                }}
+              />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       
                       {/* Badges */}
@@ -554,6 +594,7 @@ const WorksDetail = () => {
                     </div>
                   </div>
                 </div>
+                </Link>
               ))}
             </div>
           </div>

@@ -136,8 +136,8 @@ if(filterType){
 
     return errors;
   }, [formData, subcategories]); // Add subcategories to dependencies for validation
-  const NavigateTOWorks = (async (workId,categoryId,subcategoryId)=>{
-    window.location.href =`/images/works/${workId}/${categoryId}/${subcategoryId}/page`;
+  const NavigateTOWorks = (async (workId)=>{
+    window.location.href =`/images/works/${workId}/page`;
   })
   // Fetch Initial Data
   const fetchInitialData = useCallback(async () => {
@@ -330,7 +330,6 @@ if(filterType){
           work.id === selectedWork.id ? { ...work, ...newWorksData } : work
         ));
       }
-      console.log(works);
 
       closeModal();
     } catch (error) {
@@ -886,7 +885,7 @@ if(filterType){
                     <div className="flex items-center justify-between">
                       <button
                         type="button"
-                        onClick={() => {NavigateTOWorks(selectedWork.id,formData.main_category_id,formData.subcategory_id)}}
+                        onClick={() => {NavigateTOWorks(selectedWork.id)}}
                         className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
                       >
                         <Image size={16} />

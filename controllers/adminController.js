@@ -20,12 +20,21 @@ exports.getProducts = async (req, res) => {
     params.push(subcategoryId);
   }
 
-  // กรองจาก searchTerm (ค้นชื่อหรือ id)
-  if (searchTerm) {
-    whereClauses.push('(p.name LIKE ? OR p.id = ?)');
-    params.push(`%${searchTerm}%`);
-    params.push(Number(searchTerm) || 0); // แปลงเป็น number เผื่อเทียบกับ id
+
+  if (typeof searchTerm === 'string' && searchTerm.trim() !== '') {
+  const trimmedSearch = searchTerm.trim();
+
+  if (!isNaN(trimmedSearch)) {
+    // ค้นหาด้วย id เท่านั้น
+    whereClauses.push('p.id = ?');
+    params.push(parseInt(trimmedSearch));
+  } else {
+    // ถ้าไม่ใช่ตัวเลข → ค้นจากชื่อหรือคำอธิบาย
+    const searchLike = `%${trimmedSearch}%`;
+    whereClauses.push('(p.name LIKE ? OR p.description LIKE ?)');
+    params.push(searchLike, searchLike);
   }
+}
 
   const whereSQL = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
 

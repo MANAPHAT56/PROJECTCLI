@@ -28,7 +28,6 @@ const WorksImageManager = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [notification, setNotification] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState({}); // This state is not fully utilized in the current upload logic for progress
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const fileInputRef = useRef(null);
   const dropZoneRef = useRef(null);
@@ -87,7 +86,7 @@ const WorksImageManager = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/images/works/upload/${categoryId}/${subcategoryId}/${workId}`,
+        `http://localhost:5000/api/images/works/upload/${workId}`,
         {
           method: 'POST',
           body: formData,

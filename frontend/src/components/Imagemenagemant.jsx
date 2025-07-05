@@ -85,7 +85,7 @@ const ProductImageManager = () => {
           console.log(productData.category);
           console.log(productData.subcategory);
       const response = await fetch(
-        `http://localhost:5000/api/images/upload/${productData.category}/${productData.subcategory}/${productId}`,
+        `http://localhost:5000/api/images/upload/${productId}`,
         {
           method: 'POST',
           body: formData,

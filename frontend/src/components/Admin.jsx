@@ -898,7 +898,17 @@ useEffect(() => {
       </div>
       </div>
   )
-        const SubcategoriesView = () => (
+   const SubcategoriesView = (  {categories,
+  subcategories,
+  handleModal}) => {
+  const [selectedMainCategory, setSelectedMainCategory] = useState(''); // Empty string for "All Categories"
+
+  // Filtered subcategories based on the selectedMainCategory
+  const filteredSubcategories = selectedMainCategory
+    ? subcategories.filter(sub =>  String(sub.category_id) === selectedMainCategory)
+    : subcategories; // If no category selected, show all
+
+  return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">จัดการหมวดหมู่ย่อย</h2>
@@ -911,6 +921,31 @@ useEffect(() => {
         </button>
       </div>
 
+      {/* --- Main Category Filter Dropdown --- */}
+      <div className="mb-6 w-1/3"> {/* Adjust width as needed */}
+        <label htmlFor="main-category-filter" className="block text-slate-300 text-sm font-medium mb-1">
+          กรองตามหมวดหมู่หลัก:
+        </label>
+        <div className="relative">
+          <select
+            id="main-category-filter"
+            value={selectedMainCategory}
+            onChange={(e) => setSelectedMainCategory(e.target.value)}
+            className="block appearance-none w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 pr-8"
+          >
+            <option value="">ทั้งหมด</option> {/* Option to show all subcategories */}
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none" />
+        </div>
+      </div>
+      {/* --- End of Main Category Filter --- */}
+
+
       <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -922,38 +957,49 @@ useEffect(() => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {subcategories.map((subcategory) => (
-                <tr key={subcategory.id} className="hover:bg-gray-800/30">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-white">{subcategory.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {categories.find(c => c.id === subcategory.category_id)?.name || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleModal('edit', subcategory)}
-                        className="text-blue-400 hover:text-blue-300"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleModal('delete', subcategory)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+              {/* Render filtered subcategories */}
+              {filteredSubcategories.length > 0 ? (
+                filteredSubcategories.map((subcategory) => (
+                  <tr key={subcategory.id} className="hover:bg-gray-800/30">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-white">{subcategory.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {/* Find the main category name using category_id */}
+                      {categories.find(c => c.id === subcategory.category_id)?.name || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleModal('edit', subcategory)}
+                          className="text-blue-400 hover:text-blue-300"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleModal('delete', subcategory)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="3" className="px-6 py-4 text-center text-gray-400">
+                    ไม่พบหมวดหมู่ย่อยสำหรับหมวดหมู่หลักนี้
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </div>
     </div>
   );
+};
 
   const Modal = () => {
     if (!showModal) return null;
@@ -1284,7 +1330,7 @@ useEffect(() => {
       </div>
     );
   };
-
+  
   // Main render
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex">
@@ -1297,7 +1343,9 @@ useEffect(() => {
           {currentView === 'dashboard' && <DashboardView />}
           {currentView === 'products' && <ProductsView />}
           {currentView === 'categories' && <CategoriesView />}
-          {currentView === 'subcategories' && <SubcategoriesView />}
+          {currentView === 'subcategories' && <SubcategoriesView    categories={categories} // Pass categories as a prop
+        subcategories={subcategories} // Pass subcategories as a prop
+        handleModal={handleModal}/>}
           {currentView === 'works' && <Adminworks/>}
         </main>
       </div>
