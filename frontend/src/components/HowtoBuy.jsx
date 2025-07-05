@@ -13,9 +13,11 @@ import {
   Users,
   Printer
 } from 'lucide-react';
-
+import { useEffect } from 'react';
 export default function PhothongOrderProcess() {
-     window.scrollTo({ top: 0, behavior: 'smooth' });
+      useEffect(()=>{
+         window.scrollTo({ top: 0, behavior: 'smooth' });
+  },[])
   const [activeStep, setActiveStep] = useState(0);
 
   const steps = [

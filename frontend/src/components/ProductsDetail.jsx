@@ -611,7 +611,7 @@ const SubcategoryProductDetail = () => {
     <div className="container mx-auto px-4 py-8 lg:py-12 bg-slate-50 min-h-screen">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition-colors mb-8"
+        className="mt-10 flex items-center space-x-2 text-slate-600 hover:text-cyan-600 transition-colors mb-8"
       >
         <ArrowLeft size={20} />
         <span>กลับไปหน้ารายการสินค้า</span>

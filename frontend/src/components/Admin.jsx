@@ -131,19 +131,19 @@ useEffect(() => {
 }
 
   axios
-    .get(`https://api.toteja.co/api/admin/products?${params.toString()}`)
+    .get(`http://localhost:5000/api/admin/products?${params.toString()}`)
     .then((res) => {
       setProducts(res.data.data);
       setPagination(res.data.pagination);
     });
 }, [currentPage, selectedCategory, selectedSubcategory,debouncedSearchTerm]);
   useEffect(() => {
-    axios.get(`https://api.toteja.co/api/admin/Categories`).then((res) => {
+    axios.get(`http://localhost:5000/api/admin/Categories`).then((res) => {
      setCategories(res.data.categories);
     });
   }, []);
     useEffect(() => {
-    axios.get(`https://api.toteja.co/api/admin/subcategories`).then((res) => {
+    axios.get(`http://localhost:5000/api/admin/subcategories`).then((res) => {
       setSubcategories(res.data.subcategories);
     });
   }, []);
@@ -190,15 +190,15 @@ useEffect(() => {
     
   };
    const DeleteProduct = (productId) => {
-      axios.delete(`https://api.toteja.co/api/admin/delete/${productId}`).then((res) => {
+      axios.delete(`http://localhost:5000/api/admin/delete/${productId}`).then((res) => {
     });
    }
    const DeleteCategory = (categoryId) => {
-      axios.delete(`https://api.toteja.co/api/admin/delete/category/${categoryId}`).then((res) => {
+      axios.delete(`http://localhost:5000/api/admin/delete/category/${categoryId}`).then((res) => {
     });
    }
     const DeleteSubcategory = (subcategoryId) => {
-      axios.delete(`https://api.toteja.co/api/admin/delete/subcategory/${subcategoryId}`).then((res) => {
+      axios.delete(`http://localhost:5000/api/admin/delete/subcategory/${subcategoryId}`).then((res) => {
     });
    }
   const closeModal = () => {
@@ -241,7 +241,7 @@ useEffect(() => {
       
     try {
           console.log(newProductData)
-        const response = await fetch(`https://api.toteja.co/api/admin/new`, {
+        const response = await fetch(`http://localhost:5000/api/admin/new`, {
             method: 'POST', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
@@ -283,7 +283,7 @@ useEffect(() => {
         id : null
         };
          try {
-        const response = await fetch(`https://api.toteja.co/api/admin/new/category`, {
+        const response = await fetch(`http://localhost:5000/api/admin/new/category`, {
             method: 'POST', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
@@ -311,7 +311,7 @@ useEffect(() => {
         id : null
         };
          try {
-        const response = await fetch(`https://api.toteja.co/api/admin/new/subcategory`, {
+        const response = await fetch(`http://localhost:5000/api/admin/new/subcategory`, {
             method: 'POST', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
@@ -363,7 +363,7 @@ useEffect(() => {
         // Add any other fields from formData that your product table expects
         try {
           console.log(newProductData)
-        const response = await fetch(`https://api.toteja.co/api/admin/edit/${selectedItem.id}`, {
+        const response = await fetch(`http://localhost:5000/api/admin/edit/${selectedItem.id}`, {
             method: 'PUT', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
@@ -412,7 +412,7 @@ useEffect(() => {
         id : parseInt(selectedItem.id)
 } : c
         ));
-         const response = await fetch(`https://api.toteja.co/api/admin/edit/category/${selectedItem.id}`, {
+         const response = await fetch(`http://localhost:5000/api/admin/edit/category/${selectedItem.id}`, {
             method: 'PUT', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
@@ -440,7 +440,7 @@ useEffect(() => {
         id : parseInt(selectedItem.id)
 } : s
         ));
-         const response = await fetch(`https://api.toteja.co/api/admin/edit/subcategory/${selectedItem.id}`, {
+         const response = await fetch(`http://localhost:5000/api/admin/edit/subcategory/${selectedItem.id}`, {
             method: 'PUT', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
