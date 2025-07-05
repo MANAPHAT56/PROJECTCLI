@@ -9,16 +9,16 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, './.env') });
  const s3 = new S3Client({
-  region: "ap-southeast-1",
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: "AKIA2YICAB362GH27UST",
-    secretAccessKey: "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"
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
   }
 });
 console.log(process.env.AWS_ACCESS_KEY_ID+"nahjjaja")
-const BUCKET_NAME = 'photong';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
 
 // Multer config
 const upload = multer({ dest: '/tmp/uploads' });
@@ -181,7 +181,7 @@ exports.reorderImages = async (req, res) => {
 
 // 5. ลบรูปภาพเดี่ยว
 exports.deleteImage = async (req, res) => {
-  const { category, subcategory, productId, imageId } = req.params;
+  const {  productId, imageId } = req.params;
 
   try {
 

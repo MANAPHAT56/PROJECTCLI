@@ -40,7 +40,7 @@ const ProductImageManager = () => {
 
   const loadProductData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/images/getProductdata/${productId}`);
+      const response = await fetch(`https://api.toteja.co/api/images/getProductdata/${productId}`);
       const data = await response.json();
        await setProductData(data);
        console.log(productData)
@@ -57,7 +57,7 @@ const ProductImageManager = () => {
       console.log(productData.subcategory)
   const loadImages = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/images/${productId}/images`);
+      const response = await fetch(`https://api.toteja.co/api/images/${productId}/images`);
       const data = await response.json();
       if (data.success) {
         setImages(data.images);
@@ -85,7 +85,7 @@ const ProductImageManager = () => {
           console.log(productData.category);
           console.log(productData.subcategory);
       const response = await fetch(
-        `http://localhost:5000/api/images/upload/${productId}`,
+        `https://api.toteja.co/api/images/upload/${productId}`,
         {
           method: 'POST',
           body: formData,
@@ -286,7 +286,7 @@ const ProductImageManager = () => {
         if (currentMainImage && currentMainImage.id !== imageId) {
             console.log(`Unsetting old main image: ${currentMainImage.id}`);
             const response = await fetch(
-                `http://localhost:5000/api/images/${productId}/set-main`,
+                `https://api.toteja.co/api/images/${productId}/set-main`,
                 {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -304,7 +304,7 @@ const ProductImageManager = () => {
         // This also handles updating the `image_Main_path` in the `Products` table on the backend.
         console.log(`Setting new main image: ${imageId}`);
         const response = await fetch(
-            `http://localhost:5000/api/images/${productId}/set-main`,
+            `https://api.toteja.co/api/images/${productId}/set-main`,
             {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -344,7 +344,7 @@ const ProductImageManager = () => {
 
       // ลบจาก API
       const response = await fetch(
-        `http://localhost:5000/api/images/delete/${productData.category}/${productData.subcategory}/${productId}/${imageId}`,
+        `https://api.toteja.co/api/images/delete/${productData.category}/${productData.subcategory}/${productId}/${imageId}`,
         { method: 'DELETE' }
       );
 
@@ -383,7 +383,7 @@ const ProductImageManager = () => {
         }));
          console.log(imageOrders+"EGEKGOE")
       // ส่งข้อมูลไปยัง API
-      const response = await fetch(`http://localhost:5000/api/images/reorder/${productId}`, {
+      const response = await fetch(`https://api.toteja.co/api/images/reorder/${productId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

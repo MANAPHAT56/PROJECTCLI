@@ -86,7 +86,7 @@ const WorksImageManager = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/images/works/upload/${workId}`,
+        `https://api.toteja.co/api/images/works/upload/${workId}`,
         {
           method: 'POST',
           body: formData,
@@ -269,7 +269,7 @@ const WorksImageManager = () => {
     showNotification('กำลังเปลี่ยนรูปภาพหลัก...');
 
     try {
-      const response = await fetch(`http://localhost:5000/api/images/works/${workId}/set-main`, {
+      const response = await fetch(`https://api.toteja.co/api/images/works/${workId}/set-main`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageId: imageId, isMain: true }),
@@ -307,7 +307,7 @@ const WorksImageManager = () => {
     showNotification('กำลังลบรูปภาพ...');
     try {
       const response = await fetch(
-        `http://localhost:5000/api/images/works/delete/${categoryId}/${subcategoryId}/${workId}/${imageId}`,
+        `https://api.toteja.co/api/images/works/delete/${categoryId}/${subcategoryId}/${workId}/${imageId}`,
         { method: 'DELETE' }
       );
 
@@ -337,7 +337,7 @@ const WorksImageManager = () => {
           displayOrder: img.display_order
         }));
 
-      const response = await fetch(`http://localhost:5000/api/images/works/reorder/${workId}`, {
+      const response = await fetch(`https://api.toteja.co/api/images/works/reorder/${workId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -395,7 +395,7 @@ const WorksImageManager = () => {
       return   "https://cdn.toteja.co/"+imagePath; // For temporary local previews
     }
     // Encode the imagePath because it's part of the URL path for backend
-    return `http://localhost:5000/api/images/works/view/${encodeURIComponent(imagePath)}`;
+    return `https://api.toteja.co/api/images/works/view/${encodeURIComponent(imagePath)}`;
   };
 
   return (

@@ -71,8 +71,6 @@ services:
       - ./localhost+2.pem:/etc/nginx/ssl/fullchain.pem
       - ./localhost+2-key.pem:/etc/nginx/ssl/privkey.pem
       # - ./secrets/grafana.htpasswd:/etc/nginx/grafana.htpasswd
-      - ./public:/var/www/html/assets:ro
-      - ./frontend/build:/usr/share/nginx/html
     depends_on:
       - node-server
     networks:
