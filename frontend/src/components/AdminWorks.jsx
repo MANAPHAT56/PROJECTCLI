@@ -82,7 +82,7 @@ const WorksAdminManagement = () => {
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const apiBaseUrl = 'http://localhost:5000';
+  const API_BASE_URL = 'http://localhost:5000/api';
 useEffect(() => {
   const params = new URLSearchParams();
   params.append("page", currentPage);
@@ -101,7 +101,7 @@ if(filterType){
    params.append("sort",filterType)
 }
   axios
-    .get(`${apiBaseUrl}/api/admin/works/home?${params.toString()}`)
+    .get(`${API_BASE_URL}/admin/works/home?${params.toString()}`)
     .then((res) => {
 
       setWorks(res.data.works)

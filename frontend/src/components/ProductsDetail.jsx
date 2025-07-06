@@ -55,9 +55,11 @@ const SubcategoryProductDetail = () => {
   }, [productId]);
 
   useEffect(() => {
-    setTimeout(() => {
-      setLoading(false);
-    }, 250);
+      
+      if (productData) {
+         setLoading(false);
+}
+
   }, []); // Empty dependency array means this runs once after initial render
 
   useEffect(() => {

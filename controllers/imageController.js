@@ -21,7 +21,11 @@ console.log(process.env.AWS_ACCESS_KEY_ID+"nahjjaja")
 const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
 
 // Multer config
-const upload = multer({ dest: '/tmp/uploads' });
+const upload = multer({
+  dest: '/tmp/uploads/', // หรือ /tmp/uploads
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+});
+
 
 // 1. อัปโหลดรูปภาพใหม่
 exports.uploadImage = [

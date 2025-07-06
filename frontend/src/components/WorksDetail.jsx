@@ -22,14 +22,14 @@ const WorksDetail = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [imageGalleryStartIndex, setImageGalleryStartIndex] = useState(0);
   const { workId } = useParams();
-  const API_BASE_URL = 'http://localhost:5000';
+  const API_BASE_URL = 'http://localhost:5000/api/works';
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
         // Fetch work details
-        const workResponse = await fetch(`${API_BASE_URL}/api/works/works/${workId}`);
+        const workResponse = await fetch(`${API_BASE_URL}/works/${workId}`);
         
         if (!workResponse.ok) {
           throw new Error(workResponse.status === 404 ? 'ไม่พบผลงานที่ต้องการ' : `เกิดข้อผิดพลาด: ${workResponse.status}`);

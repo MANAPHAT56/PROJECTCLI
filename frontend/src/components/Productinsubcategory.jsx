@@ -48,7 +48,7 @@
       
       try {
         // Mock API response for demo
-        await new Promise(resolve => setTimeout(resolve, isSearch ? 800 : 1500)); // Simulate API delay
+     
         const params = new URLSearchParams({
           limit: productsPerPage.toString(),
           sort: sortBy,
@@ -68,7 +68,7 @@
           setProducts(data.products);
         }
         
-        setHasMore(Math.random() > 0.5); // Random has more
+        setHasMore(data.loadMore.hasMore)
         setNextCursor({ lastId: data[data.length - 1]?.id });
         
       } catch (err) {
@@ -113,14 +113,15 @@
     }, [subcategoryId, sortBy]);
 
     // Search with debounce - ไม่ให้กระพริบหน้าเว็บ
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        setNextCursor(null);
-        setHasMore(false);
-        fetchProducts(false, true); // ส่ง isSearch = true
-      }, 500);
-      return () => clearTimeout(timer);
-    }, [searchTerm]);
+useEffect(() => {
+  if (searchTerm.trim() === '') return; // ถ้ายังไม่พิมพ์ ไม่ต้องค้นหา
+  const timer = setTimeout(() => {
+    setNextCursor(null);
+    setHasMore(false);
+    fetchProducts(false, true); // isSearch
+  }, 500);
+  return () => clearTimeout(timer);
+}, [searchTerm]);
 
     const ProductCard = ({ product }) => {
       return (
