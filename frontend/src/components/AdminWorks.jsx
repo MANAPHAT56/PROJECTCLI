@@ -343,7 +343,7 @@ if(filterType){
   const handleDelete = async (worksId) => {
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบผลงานนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/delete/works/:${worksId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/delete/works/${worksId}`, {
         method: 'DELETE'
       });
 

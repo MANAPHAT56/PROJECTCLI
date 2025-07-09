@@ -651,8 +651,8 @@ exports.updateWork = async (req, res) => {
 
 exports.deleteWork = async (req, res) => {
   try {
-    const {worksId}= req.params;
-
+     let worksId = req.params.worksId?.trim?.();
+    console.log('RAW worksId:', worksId); // ✅ Debug
     const deleteQuery = `DELETE FROM Works WHERE id = ?`;
     const [result] = await db.query(deleteQuery, [worksId]);
    console.log(worksId+"worksId")

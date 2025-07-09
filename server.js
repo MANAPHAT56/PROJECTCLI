@@ -1,33 +1,40 @@
 const express = require('express');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+
 const app = express();
 app.use(express.json());
-const storeRouter = require('./routes/store');
-const worksRouter = require('./routes/work');
-// const newsRouter = require('./routes/news');
-const Admin = require('./routes/admin');
-const Image = require('./routes/imageRoutes');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
+
+// Middleware
 app.use(cors({
-   origin: 'http://localhost:5173',
+  origin: 'http://localhost:5173', // 👈 frontend origin
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }));
 app.use(cookieParser());
-// app.use('/api/home', homeRouter); // Base path
-app.use('/api/store', storeRouter); // Base path
-app.use('/api/works', worksRouter); // Base path
-// app.use('/api/contact', contactRouter); // Base path
-// app.use('/api/articles', articlesRouter); // Base path
-// app.use('/api/news', newsRouter); // Base path
-app.use('/api/admin', Admin); // Base path
-app.use('/api/images',Image); // Base path
 app.set('trust proxy', true);
-//หน้าขั้นตอนการสั่งซื้อ
-//หน้าโชว์รูม
-//หน้าเกี่ยวกับเรา
-//หน้าใบเสนอราคา
-//ตั้งค่าคุกกี้ต้องมีให้กดยอมรับด้วย
+
+// Route imports
+const storeRouter = require('./routes/store');
+const worksRouter = require('./routes/work');
+const adminRouter = require('./routes/admin');
+const imageRouter = require('./routes/imageRoutes');
+const authRoutes = require('./routes/auth');               // 👈 add this
+const verifyToken = require('./middleware/verifyToken');   // 👈 add this
+
+// Mount Routes
+app.use('/api/store', storeRouter);
+app.use('/api/works', worksRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/images', imageRouter);
+app.use('/auth', authRoutes); // ⬅ Login with Google
+
+// Protected route example
+app.get('/api/protected', verifyToken, (req, res) => {
+  res.json({ message: 'เข้าถึงได้เพราะ JWT ถูกต้อง', user: req.user });
+});
+
+// Start server
 app.listen(5000, () => {
   console.log('Server running on port 5000');
 });
