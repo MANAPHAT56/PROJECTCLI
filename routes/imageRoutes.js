@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const imageController = require('../controllers/imageController');
-
+const verifyAdminToken = require('../middleware/verifyToken'); // Middleware to verify admin token
 // 1. อัปโหลดรูปภาพใหม่ - ตรงกับ Frontend ที่ใช้ใน uploadImageToAPI
-router.post('/upload/:productId', 
+router.post('/upload/:productId', verifyAdminToken,
   imageController.uploadImage
 );
-router.put('/:productId/set-main',imageController.SetmainImage);
+router.put('/:productId/set-main',verifyAdminToken,imageController.SetmainImage);
 // 2. ดึงรูปภาพทั้งหมดของสินค้า - ตรงกับ Frontend ที่ใช้ใน loadImages
 router.get('/:productId/images', 
   imageController.getProductImages
@@ -18,12 +18,12 @@ router.get('/getProductdata/:productId',
 );
 
 // 4. อัปเดตลำดับรูปภาพหลายรูปพร้อมกัน - ตรงกับ Frontend ที่ใช้ใน handleSave
-router.put('/reorder/:productId', 
+router.put('/reorder/:productId',verifyAdminToken, 
   imageController.reorderImages
 );
 
 // 5. ลบรูปภาพเดี่ยว - ตรงกับ Frontend ที่ใช้ใน handleDelete
-router.delete('/delete/:category/:subcategory/:productId/:imageId', 
+router.delete('/delete/:category/:subcategory/:productId/:imageId', verifyAdminToken,
   imageController.deleteImage
 );
 
@@ -33,8 +33,8 @@ router.get('/view/:imagePath',
 );
 router.get('works/:workId',imageController.getWorkData)
 router.get('/works/:workId/images',imageController.getWorkImages)
-router.put('/works/:workId/set-main',imageController.setMainImageWorks)
-router.post('/works/upload/:workId',imageController.uploadImageWorks)
-router.delete('/works/delete/:categoryId/:subcategoryId/:workId/:imageId',imageController.deleteImageWorks)
-router.put('/works/reorder/:workId',imageController.reorderImagesWorks)
+router.put('/works/:workId/set-main',verifyAdminToken,imageController.setMainImageWorks)
+router.post('/works/upload/:workId',verifyAdminToken,verifyAdminToken,imageController.uploadImageWorks)
+router.delete('/works/delete/:categoryId/:subcategoryId/:workId/:imageId',verifyAdminToken,imageController.deleteImageWorks)
+router.put('/works/reorder/:workId',verifyAdminToken,imageController.reorderImagesWorks)
 module.exports = router;

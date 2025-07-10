@@ -62,20 +62,6 @@ const AdminDashboard = () => {
     navigate(`/images/${productId}`);
     // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
   };
-      const [data, setData] = useState(null);
-    useEffect(() => {
-      fetchWithAuth('http://localhost:5000/api/protected')
-        .then(setData)
-        .catch(err => {
-          console.log("kuy")
-          console.error(err);
-          if (err.status === 401 || err.status === 404 || err.status === 403) {
-              alert('ผู้ใช้แอดมินไม่ถูกต้อง');
-            navigate('/login'); // 👈 redirect ไปหน้า login
-          }
-        });
-    }, [navigate]);
-    
     useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -145,19 +131,31 @@ useEffect(() => {
 }
 
   axios
-    .get(`${apiBaseUrl}/api/admin/products?${params.toString()}`)
+    .get(`${apiBaseUrl}/api/admin/products?${params.toString()}`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+})
     .then((res) => {
       setProducts(res.data.data);
       setPagination(res.data.pagination);
     });
 }, [currentPage, selectedCategory, selectedSubcategory,debouncedSearchTerm]);
   useEffect(() => {
-    axios.get(`${apiBaseUrl}/api/admin/Categories`).then((res) => {
+    axios.get(`${apiBaseUrl}/api/admin/Categories` , {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}).then((res) => {
      setCategories(res.data.categories);
     });
   }, []);
     useEffect(() => {
-    axios.get(`${apiBaseUrl}/api/admin/subcategories`).then((res) => {
+    axios.get(`${apiBaseUrl}/api/admin/subcategories`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}).then((res) => {
       setSubcategories(res.data.subcategories);
     });
   }, []);
@@ -204,15 +202,27 @@ useEffect(() => {
     
   };
    const DeleteProduct = (productId) => {
-      axios.delete(`${apiBaseUrl}/api/admin/delete/${productId}`).then((res) => {
+      axios.delete(`${apiBaseUrl}/api/admin/delete/${productId}`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}).then((res) => {
     });
    }
    const DeleteCategory = (categoryId) => {
-      axios.delete(`${apiBaseUrl}/api/admin/delete/category/${categoryId}`).then((res) => {
+      axios.delete(`${apiBaseUrl}/api/admin/delete/category/${categoryId}`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}).then((res) => {
     });
    }
     const DeleteSubcategory = (subcategoryId) => {
-      axios.delete(`${apiBaseUrl}/api/admin/delete/subcategory/${subcategoryId}`).then((res) => {
+      axios.delete(`${apiBaseUrl}/api/admin/delete/subcategory/${subcategoryId}`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}).then((res) => {
     });
    }
   const closeModal = () => {
@@ -259,6 +269,8 @@ useEffect(() => {
             method: 'POST', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+
                 // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
             },
             body: JSON.stringify(newProductData) // Send the prepared data as JSON
@@ -301,7 +313,7 @@ useEffect(() => {
             method: 'POST', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
-                // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
+     'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: JSON.stringify(newCategory) // Send the prepared data as JSON
         });
@@ -329,6 +341,7 @@ useEffect(() => {
             method: 'POST', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
+                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
             },
             body: JSON.stringify(newSubcategory) // Send the prepared data as JSON
@@ -381,6 +394,8 @@ useEffect(() => {
             method: 'PUT', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
+
+                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
             },
             body: JSON.stringify(newProductData), // Send the prepared data as JSON
@@ -430,6 +445,7 @@ useEffect(() => {
             method: 'PUT', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
+                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
             },
             body: JSON.stringify(newCategoryData), // Send the prepared data as JSON
@@ -458,6 +474,7 @@ useEffect(() => {
             method: 'PUT', // Use PUT for updating an existing resource
             headers: {
                 'Content-Type': 'application/json',
+                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 // Add any authorization headers here if required (e.g., 'Authorization': `Bearer ${token}`)
             },
             body: JSON.stringify(newSubcategoryData), // Send the prepared data as JSON

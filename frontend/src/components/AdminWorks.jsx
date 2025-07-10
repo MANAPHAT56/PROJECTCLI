@@ -59,17 +59,6 @@ const WorksAdminManagement = () => {
   const [filterType, setFilterType] = useState('all'); // 'all', 'custom', 'sample'
   const limit=12;
   const [currentPage, setCurrentPage] = useState(1);
-        const [data, setData] = useState(null);
-      useEffect(() => {
-        fetchWithAuth('http://localhost:5000/api/protected')
-          .then(setData)
-          .catch(err => {
-            console.error(err);
-            if (err.status === 401 || err.status === 404 || err.status === 403) {
-              navigate('/login'); // 👈 redirect ไปหน้า login
-            }
-          });
-      }, [navigate]);
  const handleChangeDropdown = (e) => {
     const value = e.target.value;
     if (value === "custom") {
@@ -94,7 +83,7 @@ const WorksAdminManagement = () => {
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const API_BASE_URL = 'https://api.toteja.co/api';
+  const API_BASE_URL = 'http://localhost:5000/api';
 useEffect(() => {
   const params = new URLSearchParams();
   params.append("page", currentPage);
@@ -113,7 +102,11 @@ if(filterType){
    params.append("sort",filterType)
 }
   axios
-    .get(`${API_BASE_URL}/admin/works/home?${params.toString()}`)
+    .get(`${API_BASE_URL}/admin/works/home?${params.toString()}`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+})
     .then((res) => {
 
       setWorks(res.data.works)
@@ -157,10 +150,26 @@ if(filterType){
       setInitialLoading(true);
       setError(null); // Clear previous errors
       const [worksRes, categoriesRes, allSubcategoriesRes, productsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/admin/works/home`),
-        fetch(`${API_BASE_URL}/works/categories`),
-        fetch(`${API_BASE_URL}/works/subcategories`), // Fetch all subcategories initially
-        fetch(`${API_BASE_URL}/admin/products`)
+        fetch(`${API_BASE_URL}/admin/works/home`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}),
+        fetch(`${API_BASE_URL}/works/categories`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}),
+        fetch(`${API_BASE_URL}/works/subcategories`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}), // Fetch all subcategories initially
+        fetch(`${API_BASE_URL}/admin/products`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+})
       ]);
 
       if (!worksRes.ok || !categoriesRes.ok || !allSubcategoriesRes.ok || !productsRes.ok) {
@@ -195,7 +204,11 @@ if(filterType){
       return;
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/works/subcategories/category/${categoryId}`);
+      const response = await fetch(`${API_BASE_URL}/works/subcategories/category/${categoryId}`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+});
       if (response.ok) {
         const data = await response.json();
         setSubcategories(data);
@@ -222,7 +235,11 @@ if(filterType){
     } else if (!showModal) {
       // When modal closes, re-fetch all subcategories for the main filter dropdowns
       // Or if you want to optimize, keep a separate state for filter subcategories
-      fetch(`${API_BASE_URL}/works/subcategories`).then(res => res.json()).then(setSubcategories).catch(console.error);
+      fetch(`${API_BASE_URL}/works/subcategories`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}).then(res => res.json()).then(setSubcategories).catch(console.error);
     }
   }, [formData.main_category_id, fetchSubcategoriesByCategoryId, showModal, modalMode]);
 
@@ -284,7 +301,11 @@ if(filterType){
     });
     setFormErrors({});
     // Re-fetch all subcategories for the main filter after closing modal
-    fetch(`${API_BASE_URL}/works/subcategories`).then(res => res.json()).then(setSubcategories).catch(console.error);
+    fetch(`${API_BASE_URL}/works/subcategories`, {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  },
+}).then(res => res.json()).then(setSubcategories).catch(console.error);
   };
 
   // CRUD Operations
@@ -320,7 +341,8 @@ if(filterType){
     console.log(newWorksData)
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' , Authorization: `Bearer ${localStorage.getItem('token')}`},
+
         body: JSON.stringify(newWorksData)
       });
 
@@ -356,7 +378,8 @@ if(filterType){
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบผลงานนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
     try {
       const response = await fetch(`${API_BASE_URL}/admin/delete/works/:${worksId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+            headers: {  Authorization: `Bearer ${localStorage.getItem('token')}`},
       });
 
       if (!response.ok) {

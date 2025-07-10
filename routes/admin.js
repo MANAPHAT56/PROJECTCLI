@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Admincontroller = require('../controllers/adminController');
+const verifyAdminToken = require('../middleware/verifyToken'); // Middleware to verify admin token
+router.use(verifyAdminToken);
 router.get("/products",Admincontroller.getProducts);
 router.get("/categories",Admincontroller.getCategories);
 router.get("/subcategories",Admincontroller.getSubCategories);

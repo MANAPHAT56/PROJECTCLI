@@ -14,7 +14,10 @@ module.exports = function (req, res, next) {
         if (decoded.googleId !== process.env.ADMIN_GOOGLE_ID) {
       return res.status(403).json({ message: 'Access denied: not admin' });
     }
+    console.log('Decoded googleId:', decoded.googleId);
+console.log('Expected admin ID:', process.env.ADMIN_GOOGLE_ID);
     req.user = decoded;
+    console.log("User is admin:", req.user);
     next();
   } catch {
     res.status(403).json({ message: 'Invalid or expired token' });
