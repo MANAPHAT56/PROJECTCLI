@@ -29,7 +29,7 @@ import {
   Users,
   LogOut
 } from 'lucide-react';
-
+import { fetchWithAuth } from '../api';
 const AdminDashboard = () => {
   const descriptionRef = useRef();
   const nameRef = useRef();
@@ -62,6 +62,20 @@ const AdminDashboard = () => {
     navigate(`/images/${productId}`);
     // หรือ window.location.href = `/category/${encodeURIComponent(categoryName)}`;
   };
+      const [data, setData] = useState(null);
+    useEffect(() => {
+      fetchWithAuth('http://localhost:5000/api/protected')
+        .then(setData)
+        .catch(err => {
+          console.log("kuy")
+          console.error(err);
+          if (err.status === 401 || err.status === 404 || err.status === 403) {
+              alert('ผู้ใช้แอดมินไม่ถูกต้อง');
+            navigate('/login'); // 👈 redirect ไปหน้า login
+          }
+        });
+    }, [navigate]);
+    
     useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -82,7 +96,6 @@ const AdminDashboard = () => {
     image_Main_path: '',
     image_Sub_path: ''
   },[currentPage]);
- console.log("reloadunderFormdata")
   // Mock data
   const filteredSubcategories = subcategories.filter(
   (sub) => sub.category_id === parseInt(selectedCategory)

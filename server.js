@@ -1,13 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-
+const helmet = require('helmet');
 const app = express();
+app.use(helmet());
 app.use(express.json());
+
+const allowedOrigins = [
+  'https://frontreact.pages.dev',
+  'https://toteja.co'
+];
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // 👈 frontend origin
+  origin: allowedOrigins, // 👈 frontend origin
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }));
@@ -25,7 +31,7 @@ const verifyToken = require('./middleware/verifyToken');   // 👈 add this
 // Mount Routes
 app.use('/api/store', storeRouter);
 app.use('/api/works', worksRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api/admin',verifyToken, adminRouter);
 app.use('/api/images', imageRouter);
 app.use('/auth', authRoutes); // ⬅ Login with Google
 

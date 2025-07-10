@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building, Award, Users, Printer, Palette, Globe } from 'lucide-react';
-
+import FactorySection from './FactorySection';
+import FactoryGallery from './FactoryGallery';
 export default function PhothongPrintingWebsite() {
    window.scrollTo({ top: 0, behavior: 'smooth' });
   return (
@@ -136,7 +137,6 @@ export default function PhothongPrintingWebsite() {
           </div>
         </section>
 
-        {/* One Stop Service */}
        {/* One Stop Service */}
         <section className="py-12 sm:py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -172,54 +172,14 @@ export default function PhothongPrintingWebsite() {
             </div>
           </div>
         </section>
-
-        {/* Factory Atmosphere Gallery */}
-        <section className="py-12 sm:py-20 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h3 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-12">
-              บรรยากาศภายในโรงงาน
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {[
-                { title: "เครื่องพิมพ์ออฟเซ็ท", desc: "เครื่องพิมพ์คุณภาพสูง" },
-                { title: "โซนออกแบบ", desc: "พื้นที่สร้างสรรค์งานศิลป์" },
-                { title: "โซนพิมพ์ดิจิตอล", desc: "พิมพ์รวดเร็ว ความละเอียดสูง" },
-                { title: "โซนอิงค์เจ็ท", desc: "พิมพ์ขนาดใหญ่" },
-                { title: "โซนผลิตพรีเมี่ยม", desc: "สร้างสรรค์ของขวัญ" },
-                { title: "คลังสินค้า", desc: "จัดเก็บและจัดส่งสินค้า" }
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className="group relative backdrop-blur-sm bg-white/5 rounded-2xl overflow-hidden border border-white/10 hover:bg-white/10 transition-all duration-700"
-                  style={{
-                    animation: `slideInFromTop 0.8s ease-out ${index * 0.2}s both`
-                  }}
-                >
-                  <div className="aspect-w-16 aspect-h-9 bg-gradient-to-br from-blue-600/30 to-cyan-600/30 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 group-hover:from-blue-400/30 group-hover:to-cyan-400/30 transition-all duration-500"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                        <Printer className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                      </div>
-                    </div>
-                    <div className="absolute top-3 right-3 w-8 h-8 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                      {index + 1}
-                    </div>
-                  </div>
-                  <div className="p-4 sm:p-6">
-                    <h4 className="text-lg sm:text-xl font-semibold text-white mb-2 group-hover:text-cyan-300 transition-colors duration-300">
-                      {item.title}
-                    </h4>
-                    <p className="text-sm sm:text-base text-blue-200">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Featured Products */}
-        <section className="py-12 sm:py-20">
+        <div>
+          <FactorySection />
+        </div>
+        <div>
+          <FactoryGallery/>
+        </div>
+        {/* <section className="py-12 sm:py-20">
+          
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h3 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-12">
               สินค้าแนะนำ
@@ -279,7 +239,7 @@ export default function PhothongPrintingWebsite() {
               ))}
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* Location Map */}
         <section className="py-12 sm:py-20">

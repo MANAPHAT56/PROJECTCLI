@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { fetchWithAuth } from '../api'; // Assuming you have a fetchWithAuth function to handle auth headers
 const WorksAdminManagement = () => {
   // State Management
   const [works, setWorks] = useState([]);
@@ -58,6 +59,17 @@ const WorksAdminManagement = () => {
   const [filterType, setFilterType] = useState('all'); // 'all', 'custom', 'sample'
   const limit=12;
   const [currentPage, setCurrentPage] = useState(1);
+        const [data, setData] = useState(null);
+      useEffect(() => {
+        fetchWithAuth('http://localhost:5000/api/protected')
+          .then(setData)
+          .catch(err => {
+            console.error(err);
+            if (err.status === 401 || err.status === 404 || err.status === 403) {
+              navigate('/login'); // 👈 redirect ไปหน้า login
+            }
+          });
+      }, [navigate]);
  const handleChangeDropdown = (e) => {
     const value = e.target.value;
     if (value === "custom") {
@@ -82,7 +94,7 @@ const WorksAdminManagement = () => {
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:5000/api';
+  const API_BASE_URL = 'https://api.toteja.co/api';
 useEffect(() => {
   const params = new URLSearchParams();
   params.append("page", currentPage);
@@ -343,7 +355,7 @@ if(filterType){
   const handleDelete = async (worksId) => {
     if (!confirm('คุณแน่ใจหรือไม่ที่จะลบผลงานนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/delete/works/${worksId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/delete/works/:${worksId}`, {
         method: 'DELETE'
       });
 

@@ -43,9 +43,6 @@ const ProductImageManager = () => {
       const response = await fetch(`${apiBaseUrl}/api/images/getProductdata/${productId}`);
       const data = await response.json();
        await setProductData(data);
-       console.log(productData)
-      console.log(productData.category);
-      console.log(productData.subcategory)
    
     } catch (err) {
       console.error('Error fetching product data:', err);

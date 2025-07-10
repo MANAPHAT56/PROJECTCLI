@@ -68,8 +68,10 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./localhost+2.pem:/etc/nginx/ssl/fullchain.pem
-      - ./localhost+2-key.pem:/etc/nginx/ssl/privkey.pem
+      - /etc/letsencrypt/live/api.toteja.co/fullchain.pem:/etc/nginx/ssl/fullchain.pem
+      - /etc/letsencrypt/live/api.toteja.co/privkey.pem:/etc/nginx/ssl/privkey.pem
+      - ./phpmyadmin.htpasswd :/etc/nginx/phpmyadmin.htpasswd
+
       # - ./secrets/grafana.htpasswd:/etc/nginx/grafana.htpasswd
      
     depends_on:

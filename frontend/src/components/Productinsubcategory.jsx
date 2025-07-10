@@ -114,7 +114,6 @@
 
     // Search with debounce - ไม่ให้กระพริบหน้าเว็บ
 useEffect(() => {
-  if (searchTerm.trim() === '') return; // ถ้ายังไม่พิมพ์ ไม่ต้องค้นหา
   const timer = setTimeout(() => {
     setNextCursor(null);
     setHasMore(false);

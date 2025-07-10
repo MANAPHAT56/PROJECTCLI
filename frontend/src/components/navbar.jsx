@@ -47,7 +47,17 @@ const ModernNavbar = () => {
     },
     { name: 'ขั้นตอนการสั่งซื้อ', to: '/HowtoBuy', icon: ShoppingCart },
     { name: 'เกี่ยวกับเรา', to: '/Aboutus', icon: Users },
-        { name: 'ผลงานเเละตัวอย่าง', to: '/works', icon: Award }
+        { name: 'ผลงานเเละตัวอย่าง', to: '/works', icon: Award },
+         {
+      name: 'บทความ',
+      to: '#',
+      icon: Package,
+      dropdown: [
+        { name: 'หน้าเเรกบทความ', to: '/blogsHome' },
+        {name : 'ข้อดีของสินค้าพรีเมียม', to: '/blogsBenefits'},
+        {name : 'วัตถุประสงค์ของสินค้าพรีเมียม', to: '/blogsPurpose'}
+      ]
+    },
   ];
    return navigationItem;
 };
