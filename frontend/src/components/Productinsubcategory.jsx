@@ -171,9 +171,8 @@ useEffect(() => {
             
             <div className="flex items-center justify-between mb-3">
               <span className="text-lg sm:text-xl font-bold text-blue-600">
-                {product.price}
-              </span>
-              
+  ฿{Math.floor(product.price)}
+</span>
               {product.tags && product.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {product.tags.slice(0, 2).map((tag, index) => (
