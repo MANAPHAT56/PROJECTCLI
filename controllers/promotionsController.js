@@ -1,5 +1,6 @@
 
-import { pool } from '../db.js';
+const pool = require('../db');
+const crypto = require('crypto');
 const {
   S3Client,
   PutObjectCommand,
