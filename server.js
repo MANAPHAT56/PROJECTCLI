@@ -28,14 +28,14 @@ const adminRouter = require('./routes/admin');
 const imageRouter = require('./routes/imageRoutes');
 const authRoutes = require('./routes/auth');               // 👈 add this
 const verifyToken = require('./middleware/verifyToken');   // 👈 add this
-
+ const promotionsRouter = require('./routes/promotions');
 // Mount Routes
 app.use('/api/store', storeRouter);
 app.use('/api/works', worksRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/images', imageRouter);
 app.use('/auth', authRoutes); // ⬅ Login with Google
-
+app.use('/ api/promotions', promotionsRouter);
 // Protected route example
 app.get('/api/protected', verifyToken, (req, res) => {
   res.json({ message: 'เข้าถึงได้เพราะ JWT ถูกต้อง', user: req.user });
