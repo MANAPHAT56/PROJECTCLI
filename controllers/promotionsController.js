@@ -1,33 +1,36 @@
-
-const pool = require('../db');
+const db = require('../db');
 const crypto = require('crypto');
 const {
   S3Client,
   PutObjectCommand,
-  GetObjectCommand,
   DeleteObjectCommand
 } = require('@aws-sdk/client-s3');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const db = require('../db');
-require('dotenv').config({ path: path.resolve(__dirname, './.env') });
- const s3 = new S3Client({
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
   }
 });
+
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
+
+// ✅ ใช้ memoryStorage เพราะต้องใช้ buffer อัปโหลด S3
 const upload = multer({
-  dest: '/tmp/uploads/', // หรือ /tmp/uploads
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
-console.log(process.env.AWS_ACCESS_KEY_ID+"nahjjaja")
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
+
+exports.uploadMiddleware = upload.single('image'); // key ชื่อ image
+
+// ✅ ดึงรายการโปรโมชั่น
 exports.getPromotions = async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    const [rows] = await db.query(
       'SELECT id, name, image_url FROM promotions ORDER BY id DESC'
     );
     res.json(rows);
@@ -35,44 +38,39 @@ exports.getPromotions = async (req, res) => {
     console.error('Error fetching promotions:', err);
     res.status(500).json({ error: 'Server error' });
   }
-}
-exports.addPromotion = async (req, res) => {
-  upload(req, res, async (err) => {
-    if (err) return res.status(400).json({ error: 'File upload error' });
-
-    const { name } = req.body;
-    if (!name || !req.file) {
-      return res.status(400).json({ error: 'Name and image file are required' });
-    }
-
-    try {
-      // ✅ สร้างชื่อไฟล์ไม่ซ้ำ
-      const fileKey = `promotions/${crypto.randomUUID()}-${req.file.originalname}`;
-      
-      // ✅ อัปโหลดไป S3
-      await s3.send(new PutObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: fileKey,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype
-      }));
-
-      const imageUrl = `https://${BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
-
-      // ✅ บันทึก DB
-      const [result] = await pool.query(
-        'INSERT INTO promotions (name, image_url) VALUES (?, ?)',
-        [name, imageUrl]
-      );
-
-      res.status(201).json({ id: result.insertId, name, image_url: imageUrl });
-    } catch (err) {
-      console.error('Error adding promotion:', err);
-      res.status(500).json({ error: 'Server error' });
-    }
-  });
 };
 
+// ✅ เพิ่มโปรโมชั่น
+exports.addPromotion = async (req, res) => {
+  const { name } = req.body;
+  if (!name || !req.file) {
+    return res.status(400).json({ error: 'Name and image file are required' });
+  }
+
+  try {
+    const fileKey = `promotions/${crypto.randomUUID()}-${req.file.originalname}`;
+    await s3.send(new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: fileKey,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype
+    }));
+
+    const imageUrl = `https://${BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
+
+    const [result] = await db.query(
+      'INSERT INTO promotions (name, image_url) VALUES (?, ?)',
+      [name, imageUrl]
+    );
+
+    res.status(201).json({ id: result.insertId, name, image_url: imageUrl });
+  } catch (err) {
+    console.error('Error adding promotion:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// ✅ ลบโปรโมชั่น
 exports.deletePromotion = async (req, res) => {
   const { id } = req.params;
 
@@ -81,18 +79,14 @@ exports.deletePromotion = async (req, res) => {
   }
 
   try {
-    // ✅ ดึง image_url ก่อน
-    const [rows] = await pool.query('SELECT image_url FROM promotions WHERE id = ?', [id]);
-
+    const [rows] = await db.query('SELECT image_url FROM promotions WHERE id = ?', [id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Promotion not found' });
     }
 
     const imageUrl = rows[0].image_url;
-
-    // ✅ ลบไฟล์จาก S3 (ตรวจสอบว่ามีรูปจริงก่อน)
     if (imageUrl) {
-      const key = imageUrl.split('.com/')[1]; // แปลง URL เป็น Key
+      const key = imageUrl.split('.com/')[1];
       try {
         await s3.send(new DeleteObjectCommand({
           Bucket: BUCKET_NAME,
@@ -104,74 +98,46 @@ exports.deletePromotion = async (req, res) => {
       }
     }
 
-    // ✅ ลบข้อมูลจาก Database
-    const [result] = await pool.query('DELETE FROM promotions WHERE id = ?', [id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Promotion not found' });
-    }
-
+    await db.query('DELETE FROM promotions WHERE id = ?', [id]);
     res.json({ message: 'Promotion deleted successfully' });
   } catch (err) {
     console.error('Error deleting promotion:', err);
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+// ✅ อัปเดตโปรโมชั่น
 exports.UpdatePromotion = async (req, res) => {
-  upload(req, res, async (err) => {
-    if (err) return res.status(400).json({ error: 'File upload error' });
+  const { id } = req.params;
+  const { name } = req.body;
 
-    const { id } = req.params;
-    const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
 
-    if (!name) return res.status(400).json({ error: 'Name is required' });
+  try {
+    const [rows] = await db.query('SELECT image_url FROM promotions WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Promotion not found' });
 
-    try {
-      // ✅ ดึงข้อมูลเก่ามา
-      const [rows] = await pool.query('SELECT image_url FROM promotions WHERE id = ?', [id]);
-      if (rows.length === 0) return res.status(404).json({ error: 'Promotion not found' });
+    let newImageUrl = rows[0].image_url;
 
-      let newImageUrl = rows[0].image_url;
+    if (req.file) {
+      const oldKey = rows[0].image_url.split('.com/')[1];
+      await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: oldKey }));
 
-      // ✅ ถ้ามีไฟล์ใหม่ ให้อัปโหลด + ลบไฟล์เก่า
-      if (req.file) {
-        // ลบไฟล์เก่า
-        const oldKey = rows[0].image_url.split('.com/')[1];
-        await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: oldKey }));
+      const newKey = `promotions/${crypto.randomUUID()}-${req.file.originalname}`;
+      await s3.send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: newKey,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype
+      }));
 
-        // อัปโหลดไฟล์ใหม่
-        const newKey = `promotions/${crypto.randomUUID()}-${req.file.originalname}`;
-        await s3.send(new PutObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: newKey,
-          Body: req.file.buffer,
-          ContentType: req.file.mimetype
-        }));
-
-        newImageUrl = `https://${BUCKET_NAME}.s3.amazonaws.com/${newKey}`;
-      }
-
-      // ✅ อัปเดต DB
-      const [result] = await pool.query(
-        'UPDATE promotions SET name = ?, image_url = ? WHERE id = ?',
-        [name, newImageUrl, id]
-      );
-
-      res.json({ message: 'Promotion updated successfully', id, name, image_url: newImageUrl });
-    } catch (err) {
-      console.error('Error updating promotion:', err);
-      res.status(500).json({ error: 'Server error' });
+      newImageUrl = `https://${BUCKET_NAME}.s3.amazonaws.com/${newKey}`;
     }
-  });
+
+    await db.query('UPDATE promotions SET name = ?, image_url = ? WHERE id = ?', [name, newImageUrl, id]);
+    res.json({ message: 'Promotion updated successfully', id, name, image_url: newImageUrl });
+  } catch (err) {
+    console.error('Error updating promotion:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 };
-exports.getPromotions = async (req, res) => {
-    try {
-        const [rows] = await pool.query(
-        'SELECT id, name, image_url FROM promotions ORDER BY id DESC'
-        );
-        res.json(rows);
-    } catch (err) {
-        console.error('Error fetching promotions:', err);
-        res.status(500).json({ error: 'Server error' });
-    }
-    }

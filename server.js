@@ -35,7 +35,8 @@ app.use('/api/works', worksRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/images', imageRouter);
 app.use('/auth', authRoutes); // ⬅ Login with Google
-app.use('/ api/promotions', promotionsRouter);
+const promotionsRoutes = require('./routes/promotions');
+app.use('/api/promotions', promotionsRouter);
 // Protected route example
 app.get('/api/protected', verifyToken, (req, res) => {
   res.json({ message: 'เข้าถึงได้เพราะ JWT ถูกต้อง', user: req.user });

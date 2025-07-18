@@ -4,15 +4,15 @@ const verifyAdminToken = require('../middleware/verifyToken');
 const promotionsController = require('../controllers/promotionsController');
 
 // ✅ ดึงรายการโปรโมชั่น
-router.get('/promotions', promotionsController.getPromotions);
+router.get('/', promotionsController.getPromotions);
 
-// ✅ เพิ่มโปรโมชั่น (ต้องเป็นแอดมิน)
-router.post('/promotions', verifyAdminToken, promotionsController.addPromotion);
+// ✅ เพิ่มโปรโมชั่น (แอดมินเท่านั้น)
+router.post('/', verifyAdminToken, promotionsController.uploadMiddleware, promotionsController.addPromotion);
 
 // ✅ อัปเดตโปรโมชั่น
-router.put('/promotions/:id', verifyAdminToken, promotionsController.UpdatePromotion);
+router.put('/:id', verifyAdminToken, promotionsController.uploadMiddleware, promotionsController.UpdatePromotion);
 
 // ✅ ลบโปรโมชั่น
-router.delete('/promotions/:id', verifyAdminToken, promotionsController.deletePromotion);
+router.delete('/:id', verifyAdminToken, promotionsController.deletePromotion);
 
 module.exports = router;
