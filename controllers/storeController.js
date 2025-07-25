@@ -445,6 +445,7 @@ exports.getProductDetail = async (req, res) => {
 };
 exports.getNewProducts = async (req, res) => {
   try {
+
     const [rows] = await db.query(`
       SELECT 
         p.id,
@@ -454,8 +455,7 @@ exports.getNewProducts = async (req, res) => {
         c.name AS category
       FROM Products p
       JOIN Categories c ON p.category_id = c.id
-      WHERE p.created_at >= NOW() - INTERVAL 7 DAY
-      ORDER BY RAND()
+      ORDER BY p.created_at DESC
       LIMIT 8
     `);
 
@@ -463,7 +463,7 @@ exports.getNewProducts = async (req, res) => {
       id: product.id,
       name: product.name,
       price: Number(product.price).toLocaleString(), // ใส่ , คั่นหลักพัน
-      image: ImageUrl+product.image,
+      image: ImageUrl + product.image,
       category: product.category
     }));
 
