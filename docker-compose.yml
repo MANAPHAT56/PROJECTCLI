@@ -58,9 +58,22 @@ services:
       - db
     # deploy:
     #   replicas: 3
-    ports:
-      - "5000:5000"
     # restart: always
+# redis:
+#     image: redis:7.2-alpine
+#     container_name: redis-container
+#     command: [
+#       "redis-server",
+#       "--appendonly", "yes",
+#       "--requirepass", "my_very_secure_password",
+#       "--maxmemory", "256mb",
+#       "--maxmemory-policy", "allkeys-lru"
+#     ]
+#     volumes:
+#       - redis-data:/data
+#    networks:
+#       - monitor-net
+
   nginx:
     image: nginx:latest
     container_name: nginx-server
@@ -68,10 +81,9 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-      - /etc/letsencrypt/live/api.toteja.co/fullchain.pem:/etc/nginx/ssl/fullchain.pem
-      - /etc/letsencrypt/live/api.toteja.co/privkey.pem:/etc/nginx/ssl/privkey.pem
+      - ./localhost+2.pem:/etc/nginx/ssl/fullchain.pem
+      - ./localhost+2-key.pem:/etc/nginx/ssl/privkey.pem
       - ./phpmyadmin.htpasswd :/etc/nginx/phpmyadmin.htpasswd
-
       # - ./secrets/grafana.htpasswd:/etc/nginx/grafana.htpasswd
      
     depends_on:

@@ -1,16 +1,83 @@
 const db = require('../db');
+const redis = require('../redis'); // Assuming your redis config is in ../redis
 
+// Cache TTL settings (in seconds)
+const CACHE_TTL = {
+  WORKS_LIST: 300,      // 5 minutes for works list
+  WORK_DETAIL: 1800,    // 30 minutes for individual work
+  CATEGORIES: 3600,     // 1 hour for categories
+  SUBCATEGORIES: 3600,  // 1 hour for subcategories
+  STATS: 300,           // 5 minutes for stats
+  FEATURED: 600         // 10 minutes for featured works
+};
+
+// Helper function to generate cache keys
+const generateCacheKey = (prefix, params = {}) => {
+  const paramString = Object.keys(params)
+    .sort()
+    .map(key => `${key}:${params[key]}`)
+    .join('|');
+  return paramString ? `${prefix}:${paramString}` : prefix;
+};
+
+// Helper function to get cached data
+const getCachedData = async (key) => {
+  try {
+    const cached = await redis.get(key);
+    return cached ? JSON.parse(cached) : null;
+  } catch (error) {
+    console.error('Redis get error:', error);
+    return null;
+  }
+};
+
+// Helper function to set cached data
+const setCachedData = async (key, data, ttl) => {
+  try {
+    await redis.setex(key, ttl, JSON.stringify(data));
+  } catch (error) {
+    console.error('Redis set error:', error);
+  }
+};
+
+// Helper function to delete cache by pattern
+const deleteCacheByPattern = async (pattern) => {
+  try {
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+  } catch (error) {
+    console.error('Redis delete error:', error);
+  }
+};
 
 exports.getWorksHome = async (req, res) => {
   try {
     const {
-      page,
+      page = 1,
       limit = 12,
       category,
       subcategory,
       search,
       sort = 'latest'
     } = req.query;
+
+    // Generate cache key based on all parameters
+    const cacheKey = generateCacheKey('works:list', {
+      page,
+      limit,
+      category: category || 'all',
+      subcategory: subcategory || 'all',
+      search: search || '',
+      sort
+    });
+
+    // Try to get from cache first
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
@@ -114,7 +181,7 @@ exports.getWorksHome = async (req, res) => {
     const totalPages = Math.ceil(totalWorks / parseInt(limit));
     const hasMore = parseInt(page) < totalPages;
 
-    res.json({
+    const responseData = {
       works: processedWorks,
       pagination: {
         page: parseInt(page),
@@ -130,7 +197,12 @@ exports.getWorksHome = async (req, res) => {
         search,
         sort
       }
-    });
+    };
+
+    // Cache the result
+    await setCachedData(cacheKey, responseData, CACHE_TTL.WORKS_LIST);
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('Error fetching works:', error);
@@ -145,6 +217,14 @@ exports.getWorksHome = async (req, res) => {
 // Get categories with work counts
 exports.getCategoriesHome = async (req, res) => {
   try {
+    const cacheKey = 'categories:home';
+    
+    // Try to get from cache first
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const query = `
       SELECT 
         c.id,
@@ -176,6 +256,9 @@ exports.getCategoriesHome = async (req, res) => {
       }))
     ];
 
+    // Cache the result
+    await setCachedData(cacheKey, categories, CACHE_TTL.CATEGORIES);
+
     res.json(categories);
 
   } catch (error) {
@@ -190,6 +273,14 @@ exports.getCategoriesHome = async (req, res) => {
 
 exports.getSubcategoriesHome = async (req, res) => {
   try {
+    const cacheKey = 'subcategories:home';
+    
+    // Try to get from cache first
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const query = `
       SELECT 
         s.id,
@@ -224,6 +315,9 @@ exports.getSubcategoriesHome = async (req, res) => {
       }))
     ];
 
+    // Cache the result
+    await setCachedData(cacheKey, subcategories, CACHE_TTL.SUBCATEGORIES);
+
     res.json(subcategories);
 
   } catch (error) {
@@ -242,6 +336,14 @@ exports.getSubcategoriesByCategory = async (req, res) => {
 
     if (!categoryId || categoryId === 'all') {
       return exports.getSubcategoriesHome(req, res);
+    }
+
+    const cacheKey = `subcategories:category:${categoryId}`;
+    
+    // Try to get from cache first
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
     }
 
     const query = `
@@ -279,6 +381,9 @@ exports.getSubcategoriesByCategory = async (req, res) => {
       }))
     ];
 
+    // Cache the result
+    await setCachedData(cacheKey, subcategories, CACHE_TTL.SUBCATEGORIES);
+
     res.json(subcategories);
 
   } catch (error) {
@@ -294,6 +399,13 @@ exports.getSubcategoriesByCategory = async (req, res) => {
 exports.getWorkById = async (req, res) => {
   try {
     const { id } = req.params;
+    const cacheKey = `work:detail:${id}`;
+    
+    // Try to get from cache first
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
 
     const workQuery = `
       SELECT 
@@ -337,7 +449,7 @@ exports.getWorkById = async (req, res) => {
     const cover_image = images.find(img => img.is_main)?.image_path || null;
     const secondary_images = images.filter(img => !img.is_main).map(img => img.image_path);
 
-    res.json({
+    const responseData = {
       ...work,
       cover_image,
       secondary_images,
@@ -345,7 +457,12 @@ exports.getWorkById = async (req, res) => {
         (typeof work.secondary_assets === 'string' ? JSON.parse(work.secondary_assets) : work.secondary_assets) : [],
       is_custom: Boolean(work.is_custom),
       is_sample: Boolean(work.is_sample)
-    });
+    };
+
+    // Cache the result
+    await setCachedData(cacheKey, responseData, CACHE_TTL.WORK_DETAIL);
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('Error fetching work by ID:', error);
@@ -360,6 +477,13 @@ exports.getWorkById = async (req, res) => {
 exports.getFeaturedWorks = async (req, res) => {
   try {
     const { limit = 8 } = req.query;
+    const cacheKey = `works:featured:${limit}`;
+    
+    // Try to get from cache first
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
 
     const worksQuery = `
       SELECT 
@@ -394,6 +518,9 @@ exports.getFeaturedWorks = async (req, res) => {
       })
     );
 
+    // Cache the result
+    await setCachedData(cacheKey, worksWithImages, CACHE_TTL.FEATURED);
+
     res.json(worksWithImages);
 
   } catch (error) {
@@ -408,6 +535,14 @@ exports.getFeaturedWorks = async (req, res) => {
 
 exports.getWorksStats = async (req, res) => {
   try {
+    const cacheKey = 'works:stats';
+    
+    // Try to get from cache first
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const queries = {
       total: 'SELECT COUNT(*) as count FROM Works',
       custom: 'SELECT COUNT(*) as count FROM Works WHERE is_custom = true',
@@ -429,6 +564,9 @@ exports.getWorksStats = async (req, res) => {
       categories: results[3][0][0].count
     };
 
+    // Cache the result
+    await setCachedData(cacheKey, stats, CACHE_TTL.STATS);
+
     res.json(stats);
 
   } catch (error) {
@@ -438,5 +576,58 @@ exports.getWorksStats = async (req, res) => {
       message: 'Failed to fetch statistics',
       details: error.message
     });
+  }
+};
+
+// Cache invalidation functions (call these when data is modified)
+exports.invalidateWorksCache = async (workId = null) => {
+  try {
+    // Clear all works list cache
+    await deleteCacheByPattern('works:list:*');
+    await deleteCacheByPattern('works:featured:*');
+    await deleteCacheByPattern('works:stats');
+    
+    // Clear specific work cache if workId provided
+    if (workId) {
+      await redis.del(`work:detail:${workId}`);
+    }
+    
+    console.log('Works cache invalidated');
+  } catch (error) {
+    console.error('Error invalidating works cache:', error);
+  }
+};
+
+exports.invalidateCategoriesCache = async () => {
+  try {
+    await deleteCacheByPattern('categories:*');
+    await deleteCacheByPattern('subcategories:*');
+    console.log('Categories cache invalidated');
+  } catch (error) {
+    console.error('Error invalidating categories cache:', error);
+  }
+};
+
+// Manual cache clearing endpoint (useful for admin)
+exports.clearCache = async (req, res) => {
+  try {
+    const { pattern } = req.query;
+    
+    if (pattern) {
+      await deleteCacheByPattern(pattern);
+      res.json({ message: `Cache cleared for pattern: ${pattern}` });
+    } else {
+      // Clear all works-related cache
+      await Promise.all([
+        deleteCacheByPattern('works:*'),
+        deleteCacheByPattern('work:*'),
+        deleteCacheByPattern('categories:*'),
+        deleteCacheByPattern('subcategories:*')
+      ]);
+      res.json({ message: 'All works cache cleared' });
+    }
+  } catch (error) {
+    console.error('Error clearing cache:', error);
+    res.status(500).json({ error: 'Failed to clear cache' });
   }
 };

@@ -7,7 +7,6 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 router.post('/google', async (req, res) => {
   const { token } = req.body;
-
   try {
     const ticket = await client.verifyIdToken({
       idToken: token,
@@ -16,7 +15,7 @@ router.post('/google', async (req, res) => {
 
     const payload = ticket.getPayload();
     const { sub: googleId, email, name } = payload;
-
+       console.log("subId: "+googleId);
     // สร้าง JWT ของเรา
     const ourToken = jwt.sign({ googleId, email }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
