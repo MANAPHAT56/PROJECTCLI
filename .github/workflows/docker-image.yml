@@ -6,8 +6,9 @@ on:
   pull_request:
     branches: [ "master" ]
 permissions:
-  contents: read
-  security-events: write  # 🟢 จำเป็นสำหรับ upload-sarif
+  contents: read           # อ่านโค้ดใน repo
+  actions: read            # อ่านข้อมูล workflow
+  security-events: write   # เขียน/อัปโหลดผล security scan
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,6 +29,8 @@ jobs:
           docker push manaphat/project1-v1
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
             image-ref: 'manaphat/project1-v1'
             exit-code: '0'  # Exit if vulnerabilities of severity 'CRITICAL' or 'HIGH' are found
@@ -39,5 +42,7 @@ jobs:
         continue-on-error: true  # ไม่ให้ workflow fail แม้เจอช่องโหว่
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.jaGITHUB_TOKEN }}
         with:
           sarif_file: 'trivy-results.sarif'
