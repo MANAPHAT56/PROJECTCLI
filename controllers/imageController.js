@@ -303,11 +303,11 @@ exports.SetmainImage = async(req,res)=>{
         } else {
             return res.status(400).json({ success: false, error: 'Invalid value for isMain. Must be true or false.' });
         }
-        res.json({ success: true, message: `Image ${imageId} isMain status updated for product ${productId}.` });
+       return res.json({ success: true, message: `Image ${imageId} isMain status updated for product ${productId}.` });
 
     } catch (error) {
         console.error('Error in set-main API:', error);
-        res.status(500).json({ success: false, error: 'Internal server error.' });
+        return res.status(500).json({ success: false, error: 'Internal server error.' });
     } 
   }
   // controllers/worksImageController.js
