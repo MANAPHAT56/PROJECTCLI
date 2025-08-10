@@ -9,6 +9,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
+const tmp = require('tmp'); 
+const tmpDirObj = tmp.dirSync({ prefix: 'uploads_' }); // สร้างโฟลเดอร์ชั่วคราวชื่อสุ่ม
 require('dotenv').config({ path: path.resolve(__dirname, './.env') });
  const s3 = new S3Client({
   region: process.env.AWS_REGION,
@@ -22,10 +24,9 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
 
 // Multer config
 const upload = multer({
-  dest: '/tmp/uploads/', // หรือ /tmp/uploads
+  dest: tmpDirObj.name,  // ใช้โฟลเดอร์ที่สร้างขึ้นแบบสุ่ม
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
-
 
 // 1. อัปโหลดรูปภาพใหม่
 exports.uploadImage = [

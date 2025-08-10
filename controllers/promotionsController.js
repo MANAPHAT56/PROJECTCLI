@@ -6,9 +6,10 @@ const {
   DeleteObjectCommand
 } = require('@aws-sdk/client-s3');
 const multer = require('multer');
+const tmp = require('tmp');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-
+const tmpDirObj = tmp.dirSync({ prefix: 'uploads_' }); // สร้างโฟลเดอร์ชั่วคราวชื่อสุ่ม
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
@@ -21,10 +22,9 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
 
 // ✅ ใช้ memoryStorage เพราะต้องใช้ buffer อัปโหลด S3
 const upload = multer({
-  storage: multer.memoryStorage(),
+  dest: tmpDirObj.name,  // ใช้โฟลเดอร์ที่สร้างขึ้นแบบสุ่ม
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
-
 exports.uploadMiddleware = upload.single('image'); // key ชื่อ image
 
 // ✅ ดึงรายการโปรโมชั่น
