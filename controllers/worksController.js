@@ -39,9 +39,9 @@ const getFromCacheOrDB = async (cacheKey, dbQuery, ttl = 300) => {
 // Helper function to generate cache keys
 const generateCacheKey = (prefix, params = {}) => {
   const paramString = Object.keys(params)
-    .sort()
-    .map(key => `${key}:${params[key]}`)
-    .join('|');
+   .sort((a, b) => a.localeCompare(b))
+  .map(key => `${key}:${params[key]}`)
+  .join('|');
   return paramString ? `${prefix}:${paramString}` : prefix;
 };
 
