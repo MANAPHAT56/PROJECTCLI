@@ -1,5 +1,5 @@
 const db = require('../db');
-const redisClient = require('./redis'); // ระบุ path ไปยังไฟล์ redis.js
+const redisClient = require('../redis'); // ระบุ path ไปยังไฟล์ redis.js
 const ImageUrl = "https://cdn.toteja.co/";
 
 // Utility function สำหรับ cache
@@ -17,7 +17,7 @@ const getFromCacheOrDB = async (cacheKey, dbQuery, ttl = 300) => {
     const result = await dbQuery();
     
     // เก็บลง cache
-    await redisClient.setEx(cacheKey, ttl, JSON.stringify(result));
+    await redisClient.setex(cacheKey, ttl, JSON.stringify(result));
     
     return result;
   } catch (error) {
@@ -25,6 +25,18 @@ const getFromCacheOrDB = async (cacheKey, dbQuery, ttl = 300) => {
     // ถ้า cache error ให้ query จาก DB ตรงๆ
     return await dbQuery();
   }
+};
+exports.getCategoryPreview = (req, res) => {
+  const { categoryId } = req.params;
+  const limitedProducts = products
+    .filter(p => p.categoryId === parseInt(categoryId))
+    .slice(0, 4); // เอาแค่ 4 ชิ้นแรก
+  res.json(limitedProducts);
+};
+exports.getCategoryProducts = (req, res) => {
+  const { categoryId } = req.params;
+  const allProducts = products.filter(p => p.categoryId === parseInt(categoryId));
+  res.json(allProducts);
 };
 
 // 1. Categories with Products - cache 5 นาที
@@ -198,7 +210,7 @@ exports.getProductDetail = async (req, res) => {
           FROM Products
         `);
         maxPurchases = maxPurchasesData;
-        await redisClient.setEx(maxCacheKey, 3600, JSON.stringify(maxPurchases)); // 1 hour
+        await redisClient.setex(maxCacheKey, 3600, JSON.stringify(maxPurchases)); // 1 hour
       } else {
         maxPurchases = JSON.parse(maxPurchases);
       }

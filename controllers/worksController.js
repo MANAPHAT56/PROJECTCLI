@@ -1,14 +1,39 @@
 const db = require('../db');
-const redis = require('../redis'); // Assuming your redis config is in ../redis
+const redisClient = require('../redis'); // ระบุ path ไปยังไฟล์ redis.js
 
 // Cache TTL settings (in seconds)
 const CACHE_TTL = {
   WORKS_LIST: 300,      // 5 minutes for works list
-  WORK_DETAIL: 1800,    // 30 minutes for individual work
-  CATEGORIES: 3600,     // 1 hour for categories
-  SUBCATEGORIES: 3600,  // 1 hour for subcategories
+  WORK_DETAIL: 900,     // 15 minutes for individual work
+  CATEGORIES: 1800,     // 30 minutes for categories
+  SUBCATEGORIES: 1800,  // 30 minutes for subcategories
   STATS: 300,           // 5 minutes for stats
   FEATURED: 600         // 10 minutes for featured works
+};
+
+// Utility function สำหรับ cache
+const getFromCacheOrDB = async (cacheKey, dbQuery, ttl = 300) => {
+  try {
+    // ลองดึงจาก cache ก่อน
+    const cached = await redisClient.get(cacheKey);
+    if (cached) {
+      console.log(`✅ Cache hit: ${cacheKey}`);
+      return JSON.parse(cached);
+    }
+
+    // ถ้าไม่มีใน cache ให้ query จาก DB
+    console.log(`❌ Cache miss: ${cacheKey}`);
+    const result = await dbQuery();
+    
+    // เก็บลง cache
+    await redisClient.setex(cacheKey, ttl, JSON.stringify(result));
+    
+    return result;
+  } catch (error) {
+    console.error('Cache error:', error);
+    // ถ้า cache error ให้ query จาก DB ตรงๆ
+    return await dbQuery();
+  }
 };
 
 // Helper function to generate cache keys
@@ -20,32 +45,12 @@ const generateCacheKey = (prefix, params = {}) => {
   return paramString ? `${prefix}:${paramString}` : prefix;
 };
 
-// Helper function to get cached data
-const getCachedData = async (key) => {
-  try {
-    const cached = await redis.get(key);
-    return cached ? JSON.parse(cached) : null;
-  } catch (error) {
-    console.error('Redis get error:', error);
-    return null;
-  }
-};
-
-// Helper function to set cached data
-const setCachedData = async (key, data, ttl) => {
-  try {
-    await redis.setex(key, ttl, JSON.stringify(data));
-  } catch (error) {
-    console.error('Redis set error:', error);
-  }
-};
-
 // Helper function to delete cache by pattern
 const deleteCacheByPattern = async (pattern) => {
   try {
-    const keys = await redis.keys(pattern);
+    const keys = await redisClient.keys(pattern);
     if (keys.length > 0) {
-      await redis.del(...keys);
+      await redisClient.del(keys);
     }
   } catch (error) {
     console.error('Redis delete error:', error);
@@ -73,136 +78,125 @@ exports.getWorksHome = async (req, res) => {
       sort
     });
 
-    // Try to get from cache first
-    const cachedData = await getCachedData(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    const result = await getFromCacheOrDB(cacheKey, async () => {
+      const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+      let whereConditions = [];
+      let queryParams = [];
 
-    let whereConditions = [];
-    let queryParams = [];
-
-    if (category && category !== 'all') {
-      whereConditions.push('w.main_category_id = ?');
-      queryParams.push(category);
-    }
-
-    if (subcategory && subcategory !== 'all') {
-      whereConditions.push('w.subcategory_id = ?');
-      queryParams.push(subcategory);
-    }
-
-    if (search && search.trim()) {
-      whereConditions.push('(w.name LIKE ? OR w.main_description LIKE ?)');
-      const searchTerm = `%${search.trim()}%`;
-      queryParams.push(searchTerm, searchTerm);
-    }
-
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE ${whereConditions.join(' AND ')}` 
-      : '';
-
-    let orderByClause = '';
-    switch (sort) {
-      case 'latest':
-        orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
-        break;
-      case 'oldest':
-        orderByClause = 'ORDER BY w.created_at ASC, w.id ASC';
-        break;
-      case 'custom_only':
-        whereConditions.push('w.is_custom = true');
-        orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
-        break;
-      case 'sample_only':
-        whereConditions.push('w.is_sample = true');
-        orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
-        break;
-      case 'category_asc':
-        orderByClause = 'ORDER BY c.name ASC, w.created_at DESC';
-        break;
-      case 'category_desc':
-        orderByClause = 'ORDER BY c.name DESC, w.created_at DESC';
-        break;
-      default:
-        orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
-    }
-
-    const finalWhereClause = whereConditions.length > 0 
-      ? `WHERE ${whereConditions.join(' AND ')}` 
-      : '';
-
-    const countQuery = `
-      SELECT COUNT(*) as count 
-      FROM Works w
-      LEFT JOIN Categories c ON w.main_category_id = c.id
-      LEFT JOIN subcategories s ON w.subcategory_id = s.id
-      ${finalWhereClause}
-    `;
-
-    const [countResult] = await db.query(countQuery, queryParams);
-    const totalWorks = countResult[0].count;
-
-    const worksQuery = `
-      SELECT 
-        w.id,
-        w.name,
-        w.main_description,
-        w.sub_description,
-        w.main_category_id,
-        w.subcategory_id,
-        w.product_reference_id,
-        w.is_custom,
-        w.is_sample,
-        w.created_at,
-        COALESCE(c.name, 'ไม่ระบุหมวดหมู่') as category_name,
-        COALESCE(s.name, 'ไม่ระบุหมวดหมู่ย่อย') as subcategory_name,
-        wi.image_path AS cover_image
-      FROM Works w
-      LEFT JOIN Categories c ON w.main_category_id = c.id
-      LEFT JOIN subcategories s ON w.subcategory_id = s.id
-      LEFT JOIN WorksImages wi ON wi.work_id = w.id AND wi.is_main = true
-      ${finalWhereClause}
-      ${orderByClause}
-      LIMIT ? OFFSET ?
-    `;
-
-    const finalQueryParams = [...queryParams, parseInt(limit), offset];
-    const [works] = await db.query(worksQuery, finalQueryParams);
-
-    const processedWorks = works.map(work => ({
-      ...work,
-      is_custom: Boolean(work.is_custom),
-      is_sample: Boolean(work.is_sample)
-    }));
-
-    const totalPages = Math.ceil(totalWorks / parseInt(limit));
-    const hasMore = parseInt(page) < totalPages;
-
-    const responseData = {
-      works: processedWorks,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: totalWorks,
-        totalPages,
-        hasMore
-      },
-      hasMore,
-      filters: {
-        category,
-        subcategory,
-        search,
-        sort
+      if (category && category !== 'all') {
+        whereConditions.push('w.main_category_id = ?');
+        queryParams.push(category);
       }
-    };
 
-    // Cache the result
-    await setCachedData(cacheKey, responseData, CACHE_TTL.WORKS_LIST);
+      if (subcategory && subcategory !== 'all') {
+        whereConditions.push('w.subcategory_id = ?');
+        queryParams.push(subcategory);
+      }
 
-    res.json(responseData);
+      if (search && search.trim()) {
+        whereConditions.push('(w.name LIKE ? OR w.main_description LIKE ?)');
+        const searchTerm = `%${search.trim()}%`;
+        queryParams.push(searchTerm, searchTerm);
+      }
+
+      let orderByClause = '';
+      switch (sort) {
+        case 'latest':
+          orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
+          break;
+        case 'oldest':
+          orderByClause = 'ORDER BY w.created_at ASC, w.id ASC';
+          break;
+        case 'custom_only':
+          whereConditions.push('w.is_custom = true');
+          orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
+          break;
+        case 'sample_only':
+          whereConditions.push('w.is_sample = true');
+          orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
+          break;
+        case 'category_asc':
+          orderByClause = 'ORDER BY c.name ASC, w.created_at DESC';
+          break;
+        case 'category_desc':
+          orderByClause = 'ORDER BY c.name DESC, w.created_at DESC';
+          break;
+        default:
+          orderByClause = 'ORDER BY w.created_at DESC, w.id DESC';
+      }
+
+      const finalWhereClause = whereConditions.length > 0 
+        ? `WHERE ${whereConditions.join(' AND ')}` 
+        : '';
+
+      const countQuery = `
+        SELECT COUNT(*) as count 
+        FROM Works w
+        LEFT JOIN Categories c ON w.main_category_id = c.id
+        LEFT JOIN subcategories s ON w.subcategory_id = s.id
+        ${finalWhereClause}
+      `;
+
+      const [countResult] = await db.query(countQuery, queryParams);
+      const totalWorks = countResult[0].count;
+
+      const worksQuery = `
+        SELECT 
+          w.id,
+          w.name,
+          w.main_description,
+          w.sub_description,
+          w.main_category_id,
+          w.subcategory_id,
+          w.product_reference_id,
+          w.is_custom,
+          w.is_sample,
+          w.created_at,
+          COALESCE(c.name, 'ไม่ระบุหมวดหมู่') as category_name,
+          COALESCE(s.name, 'ไม่ระบุหมวดหมู่ย่อย') as subcategory_name,
+          wi.image_path AS cover_image
+        FROM Works w
+        LEFT JOIN Categories c ON w.main_category_id = c.id
+        LEFT JOIN subcategories s ON w.subcategory_id = s.id
+        LEFT JOIN WorksImages wi ON wi.work_id = w.id AND wi.is_main = true
+        ${finalWhereClause}
+        ${orderByClause}
+        LIMIT ? OFFSET ?
+      `;
+
+      const finalQueryParams = [...queryParams, parseInt(limit), offset];
+      const [works] = await db.query(worksQuery, finalQueryParams);
+
+      const processedWorks = works.map(work => ({
+        ...work,
+        is_custom: Boolean(work.is_custom),
+        is_sample: Boolean(work.is_sample)
+      }));
+
+      const totalPages = Math.ceil(totalWorks / parseInt(limit));
+      const hasMore = parseInt(page) < totalPages;
+
+      return {
+        works: processedWorks,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalWorks,
+          totalPages,
+          hasMore
+        },
+        hasMore,
+        filters: {
+          category,
+          subcategory,
+          search,
+          sort
+        }
+      };
+    }, CACHE_TTL.WORKS_LIST);
+
+    res.json(result);
 
   } catch (error) {
     console.error('Error fetching works:', error);
@@ -214,52 +208,45 @@ exports.getWorksHome = async (req, res) => {
   }
 };
 
-// Get categories with work counts
+// Get categories with work counts - cache 30 นาที
 exports.getCategoriesHome = async (req, res) => {
   try {
     const cacheKey = 'categories:home';
     
-    // Try to get from cache first
-    const cachedData = await getCachedData(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    const result = await getFromCacheOrDB(cacheKey, async () => {
+      const query = `
+        SELECT 
+          c.id,
+          c.name,
+          COALESCE(c.description, '') as description,
+          COUNT(w.id) as count
+        FROM Categories c
+        LEFT JOIN Works w ON c.id = w.main_category_id
+        GROUP BY c.id, c.name, c.description
+        ORDER BY c.name ASC
+      `;
 
-    const query = `
-      SELECT 
-        c.id,
-        c.name,
-        COALESCE(c.description, '') as description,
-        COUNT(w.id) as count
-      FROM Categories c
-      LEFT JOIN Works w ON c.id = w.main_category_id
-      GROUP BY c.id, c.name, c.description
-      ORDER BY c.name ASC
-    `;
+      const [rows] = await db.query(query);
 
-    const [rows] = await db.query(query);
+      const totalCount = rows.reduce((sum, row) => sum + parseInt(row.count || 0), 0);
 
-    const totalCount = rows.reduce((sum, row) => sum + parseInt(row.count || 0), 0);
+      return [
+        { 
+          id: 'all', 
+          name: 'ทั้งหมด', 
+          count: totalCount,
+          description: 'แสดงผลงานทั้งหมด'
+        },
+        ...rows.map(row => ({
+          id: row.id.toString(),
+          name: row.name,
+          count: parseInt(row.count || 0),
+          description: row.description || ''
+        }))
+      ];
+    }, CACHE_TTL.CATEGORIES);
 
-    const categories = [
-      { 
-        id: 'all', 
-        name: 'ทั้งหมด', 
-        count: totalCount,
-        description: 'แสดงผลงานทั้งหมด'
-      },
-      ...rows.map(row => ({
-        id: row.id.toString(),
-        name: row.name,
-        count: parseInt(row.count || 0),
-        description: row.description || ''
-      }))
-    ];
-
-    // Cache the result
-    await setCachedData(cacheKey, categories, CACHE_TTL.CATEGORIES);
-
-    res.json(categories);
+    res.json(result);
 
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -275,50 +262,43 @@ exports.getSubcategoriesHome = async (req, res) => {
   try {
     const cacheKey = 'subcategories:home';
     
-    // Try to get from cache first
-    const cachedData = await getCachedData(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    const result = await getFromCacheOrDB(cacheKey, async () => {
+      const query = `
+        SELECT 
+          s.id,
+          s.name,
+          COALESCE(s.description, '') as description,
+          s.category_id,
+          COUNT(w.id) as count
+        FROM subcategories s
+        LEFT JOIN Works w ON s.id = w.subcategory_id
+        GROUP BY s.id, s.name, s.description, s.category_id
+        ORDER BY s.category_id ASC, s.name ASC
+      `;
 
-    const query = `
-      SELECT 
-        s.id,
-        s.name,
-        COALESCE(s.description, '') as description,
-        s.category_id,
-        COUNT(w.id) as count
-      FROM subcategories s
-      LEFT JOIN Works w ON s.id = w.subcategory_id
-      GROUP BY s.id, s.name, s.description, s.category_id
-      ORDER BY s.category_id ASC, s.name ASC
-    `;
+      const [rows] = await db.query(query);
 
-    const [rows] = await db.query(query);
+      const totalCount = rows.reduce((sum, row) => sum + parseInt(row.count || 0), 0);
 
-    const totalCount = rows.reduce((sum, row) => sum + parseInt(row.count || 0), 0);
+      return [
+        { 
+          id: 'all', 
+          name: 'ทั้งหมด', 
+          count: totalCount,
+          description: 'แสดงผลงานทั้งหมด',
+          category_id: null
+        },
+        ...rows.map(row => ({
+          id: row.id.toString(),
+          name: row.name,
+          count: parseInt(row.count || 0),
+          description: row.description || '',
+          category_id: row.category_id
+        }))
+      ];
+    }, CACHE_TTL.SUBCATEGORIES);
 
-    const subcategories = [
-      { 
-        id: 'all', 
-        name: 'ทั้งหมด', 
-        count: totalCount,
-        description: 'แสดงผลงานทั้งหมด',
-        category_id: null
-      },
-      ...rows.map(row => ({
-        id: row.id.toString(),
-        name: row.name,
-        count: parseInt(row.count || 0),
-        description: row.description || '',
-        category_id: row.category_id
-      }))
-    ];
-
-    // Cache the result
-    await setCachedData(cacheKey, subcategories, CACHE_TTL.SUBCATEGORIES);
-
-    res.json(subcategories);
+    res.json(result);
 
   } catch (error) {
     console.error('Error fetching subcategories:', error);
@@ -340,51 +320,44 @@ exports.getSubcategoriesByCategory = async (req, res) => {
 
     const cacheKey = `subcategories:category:${categoryId}`;
     
-    // Try to get from cache first
-    const cachedData = await getCachedData(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    const result = await getFromCacheOrDB(cacheKey, async () => {
+      const query = `
+        SELECT 
+          s.id,
+          s.name,
+          COALESCE(s.description, '') as description,
+          s.category_id,
+          COUNT(w.id) as count
+        FROM subcategories s
+        LEFT JOIN Works w ON s.id = w.subcategory_id
+        WHERE s.category_id = ?
+        GROUP BY s.id, s.name, s.description, s.category_id
+        ORDER BY s.name ASC
+      `;
 
-    const query = `
-      SELECT 
-        s.id,
-        s.name,
-        COALESCE(s.description, '') as description,
-        s.category_id,
-        COUNT(w.id) as count
-      FROM subcategories s
-      LEFT JOIN Works w ON s.id = w.subcategory_id
-      WHERE s.category_id = ?
-      GROUP BY s.id, s.name, s.description, s.category_id
-      ORDER BY s.name ASC
-    `;
+      const [rows] = await db.query(query, [categoryId]);
 
-    const [rows] = await db.query(query, [categoryId]);
+      const totalCount = rows.reduce((sum, row) => sum + parseInt(row.count || 0), 0);
 
-    const totalCount = rows.reduce((sum, row) => sum + parseInt(row.count || 0), 0);
+      return [
+        { 
+          id: 'all', 
+          name: 'ทั้งหมด', 
+          count: totalCount,
+          description: 'แสดงผลงานทั้งหมดในหมวดหมู่นี้',
+          category_id: parseInt(categoryId)
+        },
+        ...rows.map(row => ({
+          id: row.id.toString(),
+          name: row.name,
+          count: parseInt(row.count || 0),
+          description: row.description || '',
+          category_id: row.category_id
+        }))
+      ];
+    }, CACHE_TTL.SUBCATEGORIES);
 
-    const subcategories = [
-      { 
-        id: 'all', 
-        name: 'ทั้งหมด', 
-        count: totalCount,
-        description: 'แสดงผลงานทั้งหมดในหมวดหมู่นี้',
-        category_id: parseInt(categoryId)
-      },
-      ...rows.map(row => ({
-        id: row.id.toString(),
-        name: row.name,
-        count: parseInt(row.count || 0),
-        description: row.description || '',
-        category_id: row.category_id
-      }))
-    ];
-
-    // Cache the result
-    await setCachedData(cacheKey, subcategories, CACHE_TTL.SUBCATEGORIES);
-
-    res.json(subcategories);
+    res.json(result);
 
   } catch (error) {
     console.error('Error fetching subcategories by category:', error);
@@ -396,73 +369,71 @@ exports.getSubcategoriesByCategory = async (req, res) => {
   }
 };
 
+// Work Detail - cache 15 นาที
 exports.getWorkById = async (req, res) => {
   try {
     const { id } = req.params;
     const cacheKey = `work:detail:${id}`;
     
-    // Try to get from cache first
-    const cachedData = await getCachedData(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    const result = await getFromCacheOrDB(cacheKey, async () => {
+      const workQuery = `
+        SELECT 
+          w.id,
+          w.name,
+          w.main_description,
+          w.sub_description,
+          w.main_category_id,
+          w.subcategory_id,
+          w.product_reference_id,
+          w.is_custom,
+          w.is_sample,
+          w.created_at,
+          COALESCE(c.name, 'ไม่ระบุหมวดหมู่') as category_name,
+          COALESCE(s.name, 'ไม่ระบุหมวดหมู่ย่อย') as subcategory_name
+        FROM Works w
+        LEFT JOIN Categories c ON w.main_category_id = c.id
+        LEFT JOIN subcategories s ON w.subcategory_id = s.id
+        WHERE w.id = ?
+      `;
 
-    const workQuery = `
-      SELECT 
-        w.id,
-        w.name,
-        w.main_description,
-        w.sub_description,
-        w.main_category_id,
-        w.subcategory_id,
-        w.product_reference_id,
-        w.is_custom,
-        w.is_sample,
-        w.created_at,
-        COALESCE(c.name, 'ไม่ระบุหมวดหมู่') as category_name,
-        COALESCE(s.name, 'ไม่ระบุหมวดหมู่ย่อย') as subcategory_name
-      FROM Works w
-      LEFT JOIN Categories c ON w.main_category_id = c.id
-      LEFT JOIN subcategories s ON w.subcategory_id = s.id
-      WHERE w.id = ?
-    `;
+      const [works] = await db.query(workQuery, [id]);
 
-    const [works] = await db.query(workQuery, [id]);
+      if (works.length === 0) {
+        return null;
+      }
 
-    if (works.length === 0) {
+      const work = works[0];
+
+      const imagesQuery = `
+        SELECT image_path, is_main
+        FROM WorksImages
+        WHERE work_id = ?
+      `;
+
+      const [images] = await db.query(imagesQuery, [id]);
+
+      const cover_image = images.find(img => img.is_main)?.image_path || null;
+      const secondary_images = images.filter(img => !img.is_main).map(img => img.image_path);
+
+      return {
+        ...work,
+        cover_image,
+        secondary_images,
+        secondary_assets: work.secondary_assets ? 
+          (typeof work.secondary_assets === 'string' ? JSON.parse(work.secondary_assets) : work.secondary_assets) : [],
+        is_custom: Boolean(work.is_custom),
+        is_sample: Boolean(work.is_sample)
+      };
+    }, CACHE_TTL.WORK_DETAIL);
+
+    if (!result) {
       return res.status(404).json({ 
         error: 'Not found',
         message: 'Work not found' 
       });
     }
 
-    const work = works[0];
-
-    const imagesQuery = `
-      SELECT image_path, is_main
-      FROM WorksImages
-      WHERE work_id = ?
-    `;
-
-    const [images] = await db.query(imagesQuery, [id]);
-
-    const cover_image = images.find(img => img.is_main)?.image_path || null;
-    const secondary_images = images.filter(img => !img.is_main).map(img => img.image_path);
-
-    const responseData = {
-      ...work,
-      cover_image,
-      secondary_images,
-      secondary_assets: work.secondary_assets ? 
-        (typeof work.secondary_assets === 'string' ? JSON.parse(work.secondary_assets) : work.secondary_assets) : [],
-      is_custom: Boolean(work.is_custom),
-      is_sample: Boolean(work.is_sample)
-    };
-
-    // Cache the result
-    await setCachedData(cacheKey, responseData, CACHE_TTL.WORK_DETAIL);
-
-    res.json(responseData);
+    res.json(result);
 
   } catch (error) {
     console.error('Error fetching work by ID:', error);
@@ -474,54 +445,48 @@ exports.getWorkById = async (req, res) => {
   }
 };
 
+// Featured Works - cache 10 นาที
 exports.getFeaturedWorks = async (req, res) => {
   try {
     const { limit = 8 } = req.query;
     const cacheKey = `works:featured:${limit}`;
     
-    // Try to get from cache first
-    const cachedData = await getCachedData(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    const result = await getFromCacheOrDB(cacheKey, async () => {
+      const worksQuery = `
+        SELECT 
+          w.id,
+          w.name,
+          w.main_description,
+          w.main_category_id,
+          w.is_custom,
+          w.is_sample,
+          w.created_at,
+          COALESCE(c.name, 'ไม่ระบุหมวดหมู่') as category_name
+        FROM Works w
+        LEFT JOIN Categories c ON w.main_category_id = c.id
+        ORDER BY w.created_at DESC
+        LIMIT ?
+      `;
 
-    const worksQuery = `
-      SELECT 
-        w.id,
-        w.name,
-        w.main_description,
-        w.main_category_id,
-        w.is_custom,
-        w.is_sample,
-        w.created_at,
-        COALESCE(c.name, 'ไม่ระบุหมวดหมู่') as category_name
-      FROM Works w
-      LEFT JOIN Categories c ON w.main_category_id = c.id
-      ORDER BY w.created_at DESC
-      LIMIT ?
-    `;
+      const [works] = await db.query(worksQuery, [parseInt(limit)]);
 
-    const [works] = await db.query(worksQuery, [parseInt(limit)]);
+      return await Promise.all(
+        works.map(async (work) => {
+          const [images] = await db.query(
+            `SELECT image_path FROM WorksImages WHERE work_id = ? AND is_main = true LIMIT 1`,
+            [work.id]
+          );
+          return {
+            ...work,
+            cover_image: images[0]?.image_path || null,
+            is_custom: Boolean(work.is_custom),
+            is_sample: Boolean(work.is_sample)
+          };
+        })
+      );
+    }, CACHE_TTL.FEATURED);
 
-    const worksWithImages = await Promise.all(
-      works.map(async (work) => {
-        const [images] = await db.query(
-          `SELECT image_path FROM WorksImages WHERE work_id = ? AND is_main = true LIMIT 1`,
-          [work.id]
-        );
-        return {
-          ...work,
-          cover_image: images[0]?.image_path || null,
-          is_custom: Boolean(work.is_custom),
-          is_sample: Boolean(work.is_sample)
-        };
-      })
-    );
-
-    // Cache the result
-    await setCachedData(cacheKey, worksWithImages, CACHE_TTL.FEATURED);
-
-    res.json(worksWithImages);
+    res.json(result);
 
   } catch (error) {
     console.error('Error fetching featured works:', error);
@@ -533,41 +498,35 @@ exports.getFeaturedWorks = async (req, res) => {
   }
 };
 
+// Works Stats - cache 5 นาที
 exports.getWorksStats = async (req, res) => {
   try {
     const cacheKey = 'works:stats';
     
-    // Try to get from cache first
-    const cachedData = await getCachedData(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    const result = await getFromCacheOrDB(cacheKey, async () => {
+      const queries = {
+        total: 'SELECT COUNT(*) as count FROM Works',
+        custom: 'SELECT COUNT(*) as count FROM Works WHERE is_custom = true',
+        samples: 'SELECT COUNT(*) as count FROM Works WHERE is_sample = true',
+        categories: 'SELECT COUNT(DISTINCT main_category_id) as count FROM Works WHERE main_category_id IS NOT NULL'
+      };
 
-    const queries = {
-      total: 'SELECT COUNT(*) as count FROM Works',
-      custom: 'SELECT COUNT(*) as count FROM Works WHERE is_custom = true',
-      samples: 'SELECT COUNT(*) as count FROM Works WHERE is_sample = true',
-      categories: 'SELECT COUNT(DISTINCT main_category_id) as count FROM Works WHERE main_category_id IS NOT NULL'
-    };
+      const results = await Promise.all([
+        db.query(queries.total),
+        db.query(queries.custom),
+        db.query(queries.samples),
+        db.query(queries.categories)
+      ]);
 
-    const results = await Promise.all([
-      db.query(queries.total),
-      db.query(queries.custom),
-      db.query(queries.samples),
-      db.query(queries.categories)
-    ]);
+      return {
+        total: results[0][0][0].count,
+        custom: results[1][0][0].count,
+        samples: results[2][0][0].count,
+        categories: results[3][0][0].count
+      };
+    }, CACHE_TTL.STATS);
 
-    const stats = {
-      total: results[0][0][0].count,
-      custom: results[1][0][0].count,
-      samples: results[2][0][0].count,
-      categories: results[3][0][0].count
-    };
-
-    // Cache the result
-    await setCachedData(cacheKey, stats, CACHE_TTL.STATS);
-
-    res.json(stats);
+    res.json(result);
 
   } catch (error) {
     console.error('Error fetching works statistics:', error);
@@ -579,19 +538,36 @@ exports.getWorksStats = async (req, res) => {
   }
 };
 
-// Cache invalidation functions (call these when data is modified)
-exports.invalidateWorksCache = async (workId = null) => {
+// Utility functions สำหรับ invalidate cache
+exports.invalidateWorksCache = async (workId = null, categoryId = null, subcategoryId = null) => {
+  const keysToDelete = [
+    'works:list:*',
+    'works:featured:*',
+    'works:stats',
+    'categories:home',
+    'subcategories:home'
+  ];
+
+  if (categoryId) {
+    keysToDelete.push(`subcategories:category:${categoryId}`);
+  }
+
+  if (workId) {
+    keysToDelete.push(`work:detail:${workId}`);
+  }
+
   try {
-    // Clear all works list cache
-    await deleteCacheByPattern('works:list:*');
-    await deleteCacheByPattern('works:featured:*');
-    await deleteCacheByPattern('works:stats');
-    
-    // Clear specific work cache if workId provided
-    if (workId) {
-      await redis.del(`work:detail:${workId}`);
+    for (const key of keysToDelete) {
+      if (key.includes('*')) {
+        // Handle pattern matching
+        const keys = await redisClient.keys(key);
+        if (keys.length > 0) {
+          await redisClient.del(keys);
+        }
+      } else {
+        await redisClient.del(key);
+      }
     }
-    
     console.log('Works cache invalidated');
   } catch (error) {
     console.error('Error invalidating works cache:', error);
@@ -599,9 +575,18 @@ exports.invalidateWorksCache = async (workId = null) => {
 };
 
 exports.invalidateCategoriesCache = async () => {
+  const keysToDelete = [
+    'categories:*',
+    'subcategories:*'
+  ];
+
   try {
-    await deleteCacheByPattern('categories:*');
-    await deleteCacheByPattern('subcategories:*');
+    for (const key of keysToDelete) {
+      const keys = await redisClient.keys(key);
+      if (keys.length > 0) {
+        await redisClient.del(keys);
+      }
+    }
     console.log('Categories cache invalidated');
   } catch (error) {
     console.error('Error invalidating categories cache:', error);
@@ -614,16 +599,22 @@ exports.clearCache = async (req, res) => {
     const { pattern } = req.query;
     
     if (pattern) {
-      await deleteCacheByPattern(pattern);
+      const keys = await redisClient.keys(pattern);
+      if (keys.length > 0) {
+        await redisClient.del(keys);
+      }
       res.json({ message: `Cache cleared for pattern: ${pattern}` });
     } else {
       // Clear all works-related cache
-      await Promise.all([
-        deleteCacheByPattern('works:*'),
-        deleteCacheByPattern('work:*'),
-        deleteCacheByPattern('categories:*'),
-        deleteCacheByPattern('subcategories:*')
-      ]);
+      const patterns = ['works:*', 'work:*', 'categories:*', 'subcategories:*'];
+      await Promise.all(
+        patterns.map(async (pattern) => {
+          const keys = await redisClient.keys(pattern);
+          if (keys.length > 0) {
+            await redisClient.del(keys);
+          }
+        })
+      );
       res.json({ message: 'All works cache cleared' });
     }
   } catch (error) {
@@ -631,3 +622,15 @@ exports.clearCache = async (req, res) => {
     res.status(500).json({ error: 'Failed to clear cache' });
   }
 };
+
+// เพิ่ม middleware สำหรับ cache headers
+exports.setCacheHeaders = (req, res, next) => {
+  // Set cache headers for client-side caching
+  res.set({
+    'Cache-Control': 'public, max-age=300', // 5 minutes
+    'ETag': `"${Date.now()}"` // Simple ETag
+  });
+  next();
+};
+
+module.exports = exports;

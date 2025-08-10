@@ -42,13 +42,6 @@ services:
       - monitor-net
     depends_on:
       - db
-  redis:
-    image: redis:latest
-    container_name: redis-container
-    volumes:
-      - redis-data:/data
-    networks:
-      - monitor-net
   node-server:
     build:
       context: .
@@ -59,26 +52,24 @@ services:
     # deploy:
     #   replicas: 3
     # restart: always
-# redis:
-#     image: redis:7.2-alpine
-#     container_name: redis-container
-#     command: [
-#       "redis-server",
-#       "--appendonly", "yes",
-#       "--requirepass", "my_very_secure_password",
-#       "--maxmemory", "256mb",
-#       "--maxmemory-policy", "allkeys-lru"
-#     ]
-#     volumes:
-#       - redis-data:/data
-#    networks:
-#       - monitor-net
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis-container
+    command: [
+      "redis-server",
+      "--appendonly", "yes",
+      "--requirepass", "mypassword",
+      "--maxmemory", "256mb",
+      "--maxmemory-policy", "allkeys-lru"
+    ]
+    volumes:
+      - redis-data:/data
+    networks:
+      - monitor-net
 
   nginx:
     image: nginx:latest
     container_name: nginx-server
-    ports:
-      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./localhost+2.pem:/etc/nginx/ssl/fullchain.pem
