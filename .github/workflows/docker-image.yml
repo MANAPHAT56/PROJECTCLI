@@ -30,7 +30,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.jaGITHUB_TOKEN }}
         with:
             image-ref: 'manaphat/project1-v1'
             exit-code: '0'  # Exit if vulnerabilities of severity 'CRITICAL' or 'HIGH' are found
